@@ -1,0 +1,63 @@
+name: Generate Driving Schedule
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'  # Each Monday at 6:00 UTC
+
+jobs:
+  generate-schedule:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install reportlab markdown2
+        
+    - name: Create driving schedule
+      run: |
+        python create_driving_schedule.py
+      env:
+        MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        SPORTLINK_TOKEN_LIST: ${{ secrets.SPORTLINK_TOKEN_LIST }}
+        
+    - name: Convert to PDF
+      run: |
+        python convert_driving_schedule_to_pdf.py
+        
+    - name: Upload PDF as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: driving-schedules-${{ github.run_number }}
+        path: docs/Handbal/*.pdf
+        retention-days: 90
+
+    - name: Send email with PDF attachments
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        secure: true
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: ${{ vars.EMAIL_SUBJECT }} ${{ github.event.repository.updated_at }}
+        to: ${{ vars.EMAIL_TO }}
+        from: ${{ vars.EMAIL_FROM }}
+        body: |
+          New driving schedule generated!
+          
+          See the attached PDF files.
+          
+          Workflow run: ${{ github.run_number }}
+          Date: ${{ github.event.repository.updated_at }}
+        attachments: docs/Handbal/*.pdf
