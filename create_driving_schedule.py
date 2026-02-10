@@ -25,9 +25,9 @@ def get_google_maps_distance_and_duration(place):
     return response['rows'][0]['elements'][0]['distance']['value'] / 1000, \
         response['rows'][0]['elements'][0]['duration']['value'] / 60
 
-def get_sportlink_calendar():
+def get_sportlink_calendar(sportlink_calendar_token):
     """ Get events from sportlink """
-    url_sportlink = f'https://data.sportlink.com/ical-team?token={sportlink_token}'
+    url_sportlink = f'https://data.sportlink.com/ical-team?token={sportlink_calendar_token}'
     response = requests.get(url_sportlink, timeout=10)
     content = response.content
     return icalendar.Calendar.from_ical(content)
@@ -123,7 +123,7 @@ assert os.getenv('SPORTLINK_TOKEN'), 'SPORTLINK_TOKEN not set'
 assert os.getenv('SPORTLINK_TEAM_LIST'), 'SPORTLINK_TEAM_LIST not set'
 
 # Sportlink - combine token and list
-sportlink_token = os.getenv('SPORTLINK_TOKEN')
+sportlink_token_list = os.getenv('SPORTLINK_TOKEN').split(',')
 sportlink_team_list = os.getenv('SPORTLINK_TEAM_LIST').split(',')
 
 events_header_list = {
@@ -149,10 +149,17 @@ for sportlink_team in sportlink_team_list:
     warming_up_time = float(sportlink_team.split(':')[2])
     travel_cost_per_km = float(sportlink_team.split(':')[3])
     team_email = sportlink_team.split(':')[4] if len(sportlink_team.split(':')) > 4 else ''
+    SPORTLINK_TOKEN = None
+    for sportlink_token in sportlink_token_list:
+        if sportlink_token.startswith(team_id + ':'):
+            SPORTLINK_TOKEN = sportlink_token.split(':')[1]
+            break
+    assert SPORTLINK_TOKEN, f"Sportlink token not found for team {team_id}"
+
     print(f'\nProcessing {team_id} @ base: {base_location}')
     # Presence time before game
     timebefore = timedelta(minutes=warming_up_time)
-    calendar = get_sportlink_calendar()
+    calendar = get_sportlink_calendar(SPORTLINK_TOKEN)
     calendar_events = get_events_from_calendar()
     # Sort events on date
     calendar_events.sort(key=lambda x: x[0])

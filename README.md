@@ -68,7 +68,7 @@ This project requires the following environment variables:
 Create a `.env` file in the root directory:
 ```bash
 MAPS_API_KEY=your_google_maps_api_key_here
-SPORTLINK_TOKEN=your_sportlink_token_here
+SPORTLINK_TOKEN_LIST=TEAM_ID:team_sportlink_calendar_token
 SPORTLINK_TEAM_LIST=TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM:TEAM_EMAIL
 # Example with multiple teams and recipients:
 # SPORTLINK_TEAM_LIST=EHV DS1:Strijp 7:60:0.23:coach1@example.com;assistant1@example.com,EHV DS2:Strijp 7:45:0.23:coach2@example.com
@@ -87,7 +87,7 @@ If you're using GitHub Actions or want to store secrets securely:
 3. Click **New repository secret**
 4. Add the following secrets:
    - Name: `MAPS_API_KEY`, Value: your Google Maps API key
-   - Name: `SPORTLINK_TOKEN`, Value: your Sportlink token(s)
+   - Name: `SPORTLINK_TOKEN_LIST`, Value: Your team Sportlink token(s)
    - Name: `EMAIL_USERNAME`, Value: your Gmail address
    - Name: `EMAIL_PASSWORD`, Value: your Gmail app password
 
