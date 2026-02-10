@@ -70,9 +70,9 @@ SPORTLINK_TOKEN=your_sportlink_token_here
 SPORTLINK_TEAM_LIST=TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM
 EMAIL_USERNAME=your.email@gmail.com
 EMAIL_PASSWORD=your_app_password_here
-EMAIL_SUBJECT=Driving Schedule EHV
+EMAIL_SUBJECT=Driving Schedule of your club
 EMAIL_TO=other.email@gmail.com
-EMAIL_FROM=your.email@gmail.com
+EMAIL_FROM=Scheduler <your.email@gmail.com>
 ```
 
 #### Setting up Secrets in GitHub
@@ -92,7 +92,7 @@ If you're using GitHub Actions or want to store secrets securely:
    - Name: `SPORTLINK_TEAM_LIST`, Value: your team configuration(s)
    - Name: `EMAIL_SUBJECT`, Value: your email subject (e.g., "Driving Schedule")
    - Name: `EMAIL_TO`, Value: recipient email addresses (comma-separated)
-   - Name: `EMAIL_FROM`, Value: sender name and email (e.g., "Scheduler <your.email@gmail.com>")
+   - Name: `EMAIL_FROM`, Value: sender name and email (e.g., "Scheduler \<your.email@gmail.com\>")
 
 ### Create Virtual Environment
 
