@@ -119,10 +119,12 @@ def cleanup_old_files(directory, prefix, suffix, keep_file):
                     print(f'  Could not remove {file}: {e}')
 
 assert os.getenv('MAPS_API_KEY'), 'MAPS_API_KEY not set'
-assert os.getenv('SPORTLINK_TOKEN_LIST'), 'SPORTLINK_TOKEN_LIST not set'
+assert os.getenv('SPORTLINK_TOKEN'), 'SPORTLINK_TOKEN not set'
+assert os.getenv('SPORTLINK_TEAM_LIST'), 'SPORTLINK_TEAM_LIST not set'
 
-# Sportlink
-sportlink_token_list = os.getenv('SPORTLINK_TOKEN_LIST').split(',')
+# Sportlink - combine token and list
+sportlink_token = os.getenv('SPORTLINK_TOKEN')
+sportlink_team_list = os.getenv('SPORTLINK_TEAM_LIST').split(',')
 
 events_header_list = {
     'en': "| Date | Day | Summary | Time @<BASE> | Start | End | Location | Travel Costs " +  \
@@ -141,12 +143,11 @@ weekday_translation = {
     'Sunday': 'Zondag'
 }
 
-for sportlink_token_item in sportlink_token_list:
-    team_id = sportlink_token_item.split(':')[0]
-    base_location = sportlink_token_item.split(':')[1]
-    sportlink_token = sportlink_token_item.split(':')[2]
-    warming_up_time = float(sportlink_token_item.split(':')[3])
-    travel_cost_per_km = float(sportlink_token_item.split(':')[4])
+for sportlink_team in sportlink_team_list:
+    team_id = sportlink_team.split(':')[0]
+    base_location = sportlink_team.split(':')[1]
+    warming_up_time = float(sportlink_team.split(':')[2])
+    travel_cost_per_km = float(sportlink_team.split(':')[3])
     print(f'\nProcessing {team_id} @ base: {base_location}')
     # Presence time before game
     timebefore = timedelta(minutes=warming_up_time)

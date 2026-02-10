@@ -27,15 +27,19 @@ This project requires the following environment variables:
    - Create credentials (API Key)
    - Copy the API key
 
-2. **SPORTLINK_TOKEN_LIST**: Comma-separated list of team configurations
-   - Format: `TEAM_ID:BASE_LOCATION:SPORTLINK_TOKEN:WARMUP_MINUTES:COST_PER_KM`
-   - Example: `DHC1:Eindhoven:abc123token:30:0.23,DHC2:Eindhoven:def456token:45:0.23`
+2. **SPORTLINK_TOKEN**: Sportlink calendar token (sensitive)
+   - Format: `token` (one token per GitHub repository)
+   - Example: `abc123token`
    - Get your Sportlink calendar token from [Sportlink](https://www.sportlink.com/)
 
-3. **EMAIL_USERNAME**: Gmail address for sending schedules (only needed for GitHub Actions)
+3. **SPORTLINK_TEAM_LIST**: Comma-separated list of team configurations
+   - Format: `TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM`
+   - Example: `EHV DS1:Strijp Rijstenweg 7:60:0.23,EHV DS2:Strijp Rijstenweg 7:45:0.23`
+
+4. **EMAIL_USERNAME**: Gmail address for sending schedules (only needed for GitHub Actions)
    - Example: `your.email@gmail.com`
 
-4. **EMAIL_PASSWORD**: Gmail app password for authentication (only needed for GitHub Actions)
+5. **EMAIL_PASSWORD**: Gmail app password for authentication (only needed for GitHub Actions)
    - Go to [Google Account Security](https://myaccount.google.com/security)
    - Enable 2-Step Verification if not already enabled
    - Go to App Passwords
@@ -47,9 +51,13 @@ This project requires the following environment variables:
 Create a `.env` file in the root directory:
 ```bash
 MAPS_API_KEY=your_google_maps_api_key_here
-SPORTLINK_TOKEN_LIST=TEAM_ID:BASE_LOCATION:SPORTLINK_TOKEN:WARMUP_MINUTES:COST_PER_KM
+SPORTLINK_TOKEN=your_sportlink_token_here
+SPORTLINK_TEAM_LIST=TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM
 EMAIL_USERNAME=your.email@gmail.com
 EMAIL_PASSWORD=your_app_password_here
+EMAIL_SUBJECT=Driving Schedule EHV
+EMAIL_TO=other.email@gmail.com
+EMAIL_FROM=your.email@gmail.com
 ```
 
 #### Setting up Secrets in GitHub
@@ -61,11 +69,12 @@ If you're using GitHub Actions or want to store secrets securely:
 3. Click **New repository secret**
 4. Add the following secrets:
    - Name: `MAPS_API_KEY`, Value: your Google Maps API key
-   - Name: `SPORTLINK_TOKEN_LIST`, Value: your team configuration string
+   - Name: `SPORTLINK_TOKEN`, Value: your Sportlink token(s)
    - Name: `EMAIL_USERNAME`, Value: your Gmail address
    - Name: `EMAIL_PASSWORD`, Value: your Gmail app password
 
 5. Click on **Variables** tab and add the following variables:
+   - Name: `SPORTLINK_TEAM_LIST`, Value: your team configuration(s)
    - Name: `EMAIL_SUBJECT`, Value: your email subject (e.g., "Driving Schedule")
    - Name: `EMAIL_TO`, Value: recipient email addresses (comma-separated)
    - Name: `EMAIL_FROM`, Value: sender name and email (e.g., "Scheduler <your.email@gmail.com>")

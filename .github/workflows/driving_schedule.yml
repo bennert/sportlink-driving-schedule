@@ -41,7 +41,8 @@ jobs:
         python create_driving_schedule.py
       env:
         MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-        SPORTLINK_TOKEN_LIST: ${{ secrets.SPORTLINK_TOKEN_LIST }}
+        SPORTLINK_TOKEN: ${{ secrets.SPORTLINK_TOKEN }}
+        SPORTLINK_TEAM_LIST: ${{ vars.SPORTLINK_TEAM_LIST }}
         
     - name: Check for changes
       id: check_changes
