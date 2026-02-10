@@ -119,11 +119,11 @@ def cleanup_old_files(directory, prefix, suffix, keep_file):
                     print(f'  Could not remove {file}: {e}')
 
 assert os.getenv('MAPS_API_KEY'), 'MAPS_API_KEY not set'
-assert os.getenv('SPORTLINK_TOKEN'), 'SPORTLINK_TOKEN not set'
+assert os.getenv('SPORTLINK_TOKEN_LIST'), 'SPORTLINK_TOKEN_LIST not set'
 assert os.getenv('SPORTLINK_TEAM_LIST'), 'SPORTLINK_TEAM_LIST not set'
 
 # Sportlink - combine token and list
-sportlink_token_list = os.getenv('SPORTLINK_TOKEN').split(',')
+sportlink_token_list = os.getenv('SPORTLINK_TOKEN_LIST').split(',')
 sportlink_team_list = os.getenv('SPORTLINK_TEAM_LIST').split(',')
 
 events_header_list = {
