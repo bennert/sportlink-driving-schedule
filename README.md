@@ -1,6 +1,21 @@
 # sportlink-driving-schedule
 Sportlink Driving Schedule
 
+## Why this project?
+
+As a team coordinator or volunteer at a sports club, you know the drill: every season, manually figuring out where away games are played, when to leave, and what the travel costs are. This manual work is time-consuming and error-prone.
+
+**This project automates the entire process:**
+
+- 📅 **Automatic synchronization** - Fetches match data directly from your Sportlink calendar
+- 🗺️ **Smart route calculation** - Calculates distances and travel times to away games via Google Maps
+- ⏰ **Departure times** - Determines when to gather based on warm-up time and travel duration  
+- 💰 **Cost calculation** - Automatically calculates travel costs per kilometer
+- 📧 **Automatic emails** - Sends weekly updated driving schedules as PDF to team members
+- 🔄 **Always up-to-date** - Runs automatically every Monday via GitHub Actions
+
+Save yourself (and your team) hours of work and prevent miscommunication about departure times and locations!
+
 ## Installation
 
 ### Fork this Repository
