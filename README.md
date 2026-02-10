@@ -42,10 +42,11 @@ This project requires the following environment variables:
    - Create credentials (API Key)
    - Copy the API key
 
-2. **SPORTLINK_TOKEN**: Sportlink calendar token (sensitive)
-   - Format: `token` (one token per GitHub repository)
-   - Example: `abc123token`
-   - Get your Sportlink calendar token from [Sportlink](https://www.sportlink.com/)
+2. **SPORTLINK_TOKEN_LIST**: Comma-separated list of team IDs with their Sportlink calendar tokens (sensitive)
+   - Format: `TEAM_ID:token,TEAM_ID2:token2`
+   - Example: `EHV DS1:abc123token,EHV DS2:def456token`
+   - Each team can have its own Sportlink calendar token
+   - Get your Sportlink calendar tokens from [Sportlink](https://www.sportlink.com/)
 
 3. **SPORTLINK_TEAM_LIST**: Comma-separated list of team configurations
    - Format: `TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM:TEAM_EMAIL`
@@ -69,6 +70,8 @@ Create a `.env` file in the root directory:
 ```bash
 MAPS_API_KEY=your_google_maps_api_key_here
 SPORTLINK_TOKEN_LIST=TEAM_ID:team_sportlink_calendar_token
+# Example with multiple teams:
+# SPORTLINK_TOKEN_LIST=EHV DS1:abc123token,EHV DS2:def456token
 SPORTLINK_TEAM_LIST=TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM:TEAM_EMAIL
 # Example with multiple teams and recipients:
 # SPORTLINK_TEAM_LIST=EHV DS1:Strijp 7:60:0.23:coach1@example.com;assistant1@example.com,EHV DS2:Strijp 7:45:0.23:coach2@example.com
@@ -87,7 +90,7 @@ If you're using GitHub Actions or want to store secrets securely:
 3. Click **New repository secret**
 4. Add the following secrets:
    - Name: `MAPS_API_KEY`, Value: your Google Maps API key
-   - Name: `SPORTLINK_TOKEN_LIST`, Value: Your team Sportlink token(s)
+   - Name: `SPORTLINK_TOKEN_LIST`, Value: Your team Sportlink tokens (format: `TEAM_ID:token,TEAM_ID2:token2`)
    - Name: `EMAIL_USERNAME`, Value: your Gmail address
    - Name: `EMAIL_PASSWORD`, Value: your Gmail app password
 
