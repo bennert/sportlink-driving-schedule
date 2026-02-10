@@ -48,8 +48,10 @@ This project requires the following environment variables:
    - Get your Sportlink calendar token from [Sportlink](https://www.sportlink.com/)
 
 3. **SPORTLINK_TEAM_LIST**: Comma-separated list of team configurations
-   - Format: `TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM`
-   - Example: `EHV DS1:Strijp Rijstenweg 7:60:0.23,EHV DS2:Strijp Rijstenweg 7:45:0.23`
+   - Format: `TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM:TEAM_EMAIL`
+   - Example: `EHV DS1:Strijp Rijstenweg 7:60:0.23:coach1@example.com,EHV DS2:Strijp Rijstenweg 7:45:0.23:coach2@example.com`
+   - Each team can have its own email recipient for the driving schedule
+   - Multiple email addresses per team can be separated by semicolons (e.g., `coach1@example.com;assistant@example.com`)
 
 4. **EMAIL_USERNAME**: Gmail address for sending schedules (only needed for GitHub Actions)
    - Example: `your.email@gmail.com`
@@ -67,11 +69,12 @@ Create a `.env` file in the root directory:
 ```bash
 MAPS_API_KEY=your_google_maps_api_key_here
 SPORTLINK_TOKEN=your_sportlink_token_here
-SPORTLINK_TEAM_LIST=TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM
+SPORTLINK_TEAM_LIST=TEAM_ID:BASE_LOCATION:WARMUP_MINUTES:COST_PER_KM:TEAM_EMAIL
+# Example with multiple teams and recipients:
+# SPORTLINK_TEAM_LIST=EHV DS1:Strijp 7:60:0.23:coach1@example.com;assistant1@example.com,EHV DS2:Strijp 7:45:0.23:coach2@example.com
 EMAIL_USERNAME=your.email@gmail.com
 EMAIL_PASSWORD=your_app_password_here
 EMAIL_SUBJECT=Driving Schedule of your club
-EMAIL_TO=other.email@gmail.com
 EMAIL_FROM=Scheduler <your.email@gmail.com>
 ```
 
@@ -89,9 +92,8 @@ If you're using GitHub Actions or want to store secrets securely:
    - Name: `EMAIL_PASSWORD`, Value: your Gmail app password
 
 5. Click on **Variables** tab and add the following variables:
-   - Name: `SPORTLINK_TEAM_LIST`, Value: your team configuration(s)
+   - Name: `SPORTLINK_TEAM_LIST`, Value: your team configuration(s) including email per team
    - Name: `EMAIL_SUBJECT`, Value: your email subject (e.g., "Driving Schedule")
-   - Name: `EMAIL_TO`, Value: recipient email addresses (comma-separated)
    - Name: `EMAIL_FROM`, Value: sender name and email (e.g., "Scheduler \<your.email@gmail.com\>")
 
 ### Create Virtual Environment

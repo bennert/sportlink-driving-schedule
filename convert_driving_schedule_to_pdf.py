@@ -27,7 +27,7 @@ def cleanup_pdfs(directory):
 
 # Input en output paths
 script_dir = os.path.dirname(os.path.abspath(__file__))
-markdown_folder = os.path.join(script_dir, "docs", "Handbal")
+markdown_folder = os.path.join(script_dir, "docs")
 
 # Check for flag files that indicate which markdown files to convert
 flag_files = [file for file in os.listdir(markdown_folder) if file.endswith(".flag")]
@@ -44,11 +44,11 @@ markdown_files_to_convert = []
 for flag_file in flag_files:
     flag_path = os.path.join(markdown_folder, flag_file)
     with open(flag_path, 'r', encoding='utf-8') as f:
-        files = [line.strip() for line in f.readlines()]
+        files = [
+            line.strip() for line in f.readlines()[:-1]
+            if os.path.exists(os.path.join(script_dir, line.strip()))
+        ]
         markdown_files_to_convert.extend(files)
-    # Remove the flag file after reading
-    os.remove(flag_path)
-    print(f"Flag bestand verwijderd: {flag_file}")
 
 print(f"\nConverting {len(markdown_files_to_convert)} markdown file(s) to PDF...")
 

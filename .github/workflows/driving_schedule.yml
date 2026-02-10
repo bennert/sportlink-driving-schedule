@@ -76,23 +76,12 @@ jobs:
         path: docs/Handbal/*.pdf
         retention-days: 90
 
-    - name: Send email with PDF attachments
+    - name: Send emails per team
       if: steps.check_changes.outputs.changes == 'true'
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 465
-        secure: true
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: ${{ vars.EMAIL_SUBJECT }} ${{ github.event.repository.updated_at }}
-        to: ${{ vars.EMAIL_TO }}
-        from: ${{ vars.EMAIL_FROM }}
-        body: |
-          New driving schedule generated!
-          
-          See the attached PDF files.
-          
-          Workflow run: ${{ github.run_number }}
-          Date: ${{ github.event.repository.updated_at }}
-        attachments: docs/Handbal/*.pdf
+      run: |
+        python send_team_emails.py
+      env:
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+        EMAIL_SUBJECT: ${{ vars.EMAIL_SUBJECT }}

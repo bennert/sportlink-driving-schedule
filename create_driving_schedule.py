@@ -148,6 +148,7 @@ for sportlink_team in sportlink_team_list:
     base_location = sportlink_team.split(':')[1]
     warming_up_time = float(sportlink_team.split(':')[2])
     travel_cost_per_km = float(sportlink_team.split(':')[3])
+    team_email = sportlink_team.split(':')[4] if len(sportlink_team.split(':')) > 4 else ''
     print(f'\nProcessing {team_id} @ base: {base_location}')
     # Presence time before game
     timebefore = timedelta(minutes=warming_up_time)
@@ -158,11 +159,11 @@ for sportlink_team in sportlink_team_list:
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    FILE_PATH_NL = f'docs/Handbal/Rijschema_{team_id}_{today}.md'
-    FILE_PATH_EN = f'docs/Handbal/Drivingschedule_{team_id}_{today}.md'
+    FILE_PATH_NL = f'docs/Rijschema_{team_id}_{today}.md'
+    FILE_PATH_EN = f'docs/Drivingschedule_{team_id}_{today}.md'
     # Ensure the directories exist
-    handbal_dir = os.path.dirname(FILE_PATH_NL)
-    os.makedirs(handbal_dir, exist_ok=True)
+    docs_dir = os.path.dirname(FILE_PATH_NL)
+    os.makedirs(docs_dir, exist_ok=True)
 
     # Build content first to check if it changed
     CONTENT_EN = f'\n# Driving schedule {team_id}\n\n'
@@ -185,14 +186,14 @@ for sportlink_team in sportlink_team_list:
         CONTENT_NL += '| ' + ' | '.join(calendar_event) + ' |\n'
 
     # Check if content changed by comparing with old files (if they exist)
-    CHANGED_NL = has_content_changed(handbal_dir, f'Rijschema_{team_id}', CONTENT_NL)
-    CHANGED_EN = has_content_changed(handbal_dir, f'Drivingschedule_{team_id}', CONTENT_EN)
+    CHANGED_NL = has_content_changed(docs_dir, f'Rijschema_{team_id}', CONTENT_NL)
+    CHANGED_EN = has_content_changed(docs_dir, f'Drivingschedule_{team_id}', CONTENT_EN)
 
     # Only create flag file if content changed (to trigger PDF conversion)
     if CHANGED_NL or CHANGED_EN:
         # Clean up old files with different dates
-        cleanup_old_files(handbal_dir, f'Rijschema_{team_id}', '.md', FILE_PATH_NL)
-        cleanup_old_files(handbal_dir, f'Drivingschedule_{team_id}', '.md', FILE_PATH_EN)
+        cleanup_old_files(docs_dir, f'Rijschema_{team_id}', '.md', FILE_PATH_NL)
+        cleanup_old_files(docs_dir, f'Drivingschedule_{team_id}', '.md', FILE_PATH_EN)
 
         with open(FILE_PATH_NL, 'w', encoding='utf-8') as file_nl:
             file_nl.write(CONTENT_NL)
@@ -200,9 +201,9 @@ for sportlink_team in sportlink_team_list:
         with open(FILE_PATH_EN, 'w', encoding='utf-8') as file_en:
             file_en.write(CONTENT_EN)
 
-        FLAG_FILE = f'docs/Handbal/.convert_to_pdf_{team_id}.flag'
+        FLAG_FILE = f'docs/.convert_to_pdf_{team_id}.flag'
         print('  Content changed - flag file created for PDF conversion')
         with open(FLAG_FILE, 'w', encoding='utf-8') as f:
-            f.write(f'{FILE_PATH_NL}\n{FILE_PATH_EN}\n')
+            f.write(f'{FILE_PATH_NL}\n{FILE_PATH_EN}\n{team_email}\n')
     else:
         print('  No changes detected - PDF conversion not needed')
