@@ -11,20 +11,19 @@ from reportlab.lib.units import inch
 from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
                                 TableStyle)
 
-def cleanup_old_pdfs(directory, prefix_pattern, keep_file):
-    """ Remove old PDF files matching pattern, except the one to keep """
+def cleanup_pdfs(directory):
+    """ Remove PDF files """
     if not os.path.exists(directory):
         return
 
     for file in os.listdir(directory):
-        if file.startswith(prefix_pattern) and file.endswith('.pdf'):
+        if file.endswith('.pdf'):
             full_path = os.path.join(directory, file)
-            if full_path != keep_file:
-                try:
-                    os.remove(full_path)
-                    print(f"  Removed old PDF: {file}")
-                except OSError as e:
-                    print(f"  Could not remove {file}: {e}")
+            try:
+                os.remove(full_path)
+                print(f"  Removed PDF: {file}")
+            except OSError as e:
+                print(f"  Could not remove {file}: {e}")
 
 # Input en output paths
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +35,9 @@ flag_files = [file for file in os.listdir(markdown_folder) if file.endswith(".fl
 if not flag_files:
     print("No changes detected - no PDF conversion needed")
     exit(0)
+else:
+    # Clean up PDF files
+    cleanup_pdfs(markdown_folder)
 
 # Collect all markdown files that need to be converted
 markdown_files_to_convert = []
@@ -193,12 +195,3 @@ for markdown_file in markdown_files_to_convert:
     pdf.build(story)
 
     print(f"PDF succesvol aangemaakt: {output_pdf}")
-
-    # Clean up old PDF files with different dates
-    pdf_filename = os.path.basename(output_pdf)
-    # Extract prefix (everything before the last underscore and date)
-    # Format: Rijschema_TEAMID_DATE.pdf or Drivingschedule_TEAMID_DATE.pdf
-    parts = pdf_filename.rsplit('_', 1)  # Split from right
-    if len(parts) == 2:
-        prefix = parts[0]  # e.g., "Rijschema_EHV HS3"
-        cleanup_old_pdfs(markdown_folder, prefix_pattern=prefix, keep_file=output_pdf)
