@@ -24,6 +24,15 @@ jobs:
         pip install -r requirements.txt
         pip install reportlab markdown2
         
+    - name: Download previous artifacts
+      uses: dawidd6/action-download-artifact@v3
+      continue-on-error: true
+      with:
+        name: driving-schedules-md
+        path: docs/Handbal/
+        workflow: driving_schedule.yml
+        if_no_artifact_found: ignore
+        
     - name: Create driving schedule
       run: |
         python create_driving_schedule.py
@@ -31,7 +40,20 @@ jobs:
         MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         SPORTLINK_TOKEN_LIST: ${{ secrets.SPORTLINK_TOKEN_LIST }}
         
+    - name: Check for changes
+      id: check_changes
+      run: |
+        if ls docs/Handbal/.convert_to_pdf_*.flag 2>/dev/null; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "Changes detected - will convert to PDF and send email"
+        else
+          echo "changes=false" >> $GITHUB_OUTPUT
+          echo "No changes detected - skipping PDF conversion and email"
+        fi
+      shell: bash
+        
     - name: Convert to PDF
+      if: steps.check_changes.outputs.changes == 'true'
       run: |
         python convert_driving_schedule_to_pdf.py
         
@@ -43,6 +65,7 @@ jobs:
         retention-days: 90
 
     - name: Send email with PDF attachments
+      if: steps.check_changes.outputs.changes == 'true'
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com

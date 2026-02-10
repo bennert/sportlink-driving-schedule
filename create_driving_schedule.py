@@ -1,6 +1,7 @@
 """ Maak rijschema voor team op basis van sportlink kalender en google maps afstand en tijd """
 from datetime import datetime, timedelta
 import os
+import hashlib
 import requests
 import icalendar
 from dotenv import load_dotenv
@@ -70,6 +71,53 @@ def get_events_header(language):
     """ Get events header """
     return events_header_list[language].replace("<BASE>", base_location)
 
+def get_content_hash(content):
+    """ Calculate hash of content to detect changes """
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
+
+def find_old_file(directory, prefix, suffix):
+    """ Find the most recent file matching pattern prefix_*_suffix """
+    if not os.path.exists(directory):
+        return None
+
+    matching_files = []
+    for file in os.listdir(directory):
+        if file.startswith(prefix) and file.endswith(suffix):
+            matching_files.append(os.path.join(directory, file))
+
+    if not matching_files:
+        return None
+
+    # Return the most recently modified file
+    return max(matching_files, key=os.path.getmtime)
+
+def has_content_changed(directory, prefix, new_content):
+    """ Check if file content has changed by finding old file with prefix """
+    # Find the most recent old file matching the prefix
+    old_file = find_old_file(directory, prefix, '.md')
+
+    if not old_file:
+        return True  # No old file found, so content has "changed"
+
+    with open(old_file, 'r', encoding='utf-8') as file_old:
+        old_content = file_old.read()
+    return get_content_hash(old_content) != get_content_hash(new_content)
+
+def cleanup_old_files(directory, prefix, suffix, keep_file):
+    """ Remove old files matching pattern, except the one to keep """
+    if not os.path.exists(directory):
+        return
+
+    for file in os.listdir(directory):
+        if file.startswith(prefix) and file.endswith(suffix):
+            full_path = os.path.join(directory, file)
+            if full_path != keep_file:
+                try:
+                    os.remove(full_path)
+                    print(f'  Removed old file: {file}')
+                except OSError as e:
+                    print(f'  Could not remove {file}: {e}')
+
 assert os.getenv('MAPS_API_KEY'), 'MAPS_API_KEY not set'
 assert os.getenv('SPORTLINK_TOKEN_LIST'), 'SPORTLINK_TOKEN_LIST not set'
 
@@ -112,26 +160,48 @@ for sportlink_token_item in sportlink_token_list:
     FILE_PATH_NL = f'docs/Handbal/Rijschema_{team_id}_{today}.md'
     FILE_PATH_EN = f'docs/Handbal/Drivingschedule_{team_id}_{today}.md'
     # Ensure the directories exist
-    os.makedirs(os.path.dirname(FILE_PATH_NL), exist_ok=True)
-    os.makedirs(os.path.dirname(FILE_PATH_EN), exist_ok=True)
-    with open(FILE_PATH_NL, 'w', encoding='utf-8') as file_nl, \
-        open(FILE_PATH_EN, 'w', encoding='utf-8') as file_en:
+    handbal_dir = os.path.dirname(FILE_PATH_NL)
+    os.makedirs(handbal_dir, exist_ok=True)
 
-        file_en.write(f'\n# Driving schedule {team_id}\n\n')
-        file_en.write(f'Base location: {base_location}\n\n')
-        file_en.write(f'Warming Up Time: {timebefore}\n\n')
-        file_en.write(f'Cost per km: €{travel_cost_per_km}\n\n')
-        file_en.write(get_events_header('en'))
-        file_en.write('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n')
-        for calendar_event in calendar_events:
-            file_en.write('| ' + ' | '.join(calendar_event) + ' |\n')
+    # Build content first to check if it changed
+    CONTENT_EN = f'\n# Driving schedule {team_id}\n\n'
+    CONTENT_EN += f'Base location: {base_location}\n\n'
+    CONTENT_EN += f'Warming Up Time: {timebefore}\n\n'
+    CONTENT_EN += f'Cost per km: €{travel_cost_per_km}\n\n'
+    CONTENT_EN += get_events_header('en')
+    CONTENT_EN += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
+    for calendar_event in calendar_events:
+        CONTENT_EN += '| ' + ' | '.join(calendar_event) + ' |\n'
 
-        file_nl.write(f'\n# Rijschema {team_id}\n\n')
-        file_nl.write(f'Basis locatie: {base_location}\n\n')
-        file_nl.write(f'Warming Up Tijd: {timebefore}\n\n')
-        file_nl.write(f'Kosten per km: €{travel_cost_per_km}\n\n')
-        file_nl.write(get_events_header('nl'))
-        file_nl.write('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n')
-        for calendar_event in calendar_events:
-            calendar_event[1] = weekday_translation[calendar_event[1]]
-            file_nl.write('| ' + ' | '.join(calendar_event) + ' |\n')
+    CONTENT_NL = f'\n# Rijschema {team_id}\n\n'
+    CONTENT_NL += f'Basis locatie: {base_location}\n\n'
+    CONTENT_NL += f'Warming Up Tijd: {timebefore}\n\n'
+    CONTENT_NL += f'Kosten per km: €{travel_cost_per_km}\n\n'
+    CONTENT_NL += get_events_header('nl')
+    CONTENT_NL += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
+    for calendar_event in calendar_events:
+        calendar_event[1] = weekday_translation[calendar_event[1]]
+        CONTENT_NL += '| ' + ' | '.join(calendar_event) + ' |\n'
+
+    # Check if content changed by comparing with old files (if they exist)
+    CHANGED_NL = has_content_changed(handbal_dir, f'Rijschema_{team_id}', CONTENT_NL)
+    CHANGED_EN = has_content_changed(handbal_dir, f'Drivingschedule_{team_id}', CONTENT_EN)
+
+    # Only create flag file if content changed (to trigger PDF conversion)
+    if CHANGED_NL or CHANGED_EN:
+        # Clean up old files with different dates
+        cleanup_old_files(handbal_dir, f'Rijschema_{team_id}', '.md', FILE_PATH_NL)
+        cleanup_old_files(handbal_dir, f'Drivingschedule_{team_id}', '.md', FILE_PATH_EN)
+
+        with open(FILE_PATH_NL, 'w', encoding='utf-8') as file_nl:
+            file_nl.write(CONTENT_NL)
+
+        with open(FILE_PATH_EN, 'w', encoding='utf-8') as file_en:
+            file_en.write(CONTENT_EN)
+
+        FLAG_FILE = f'docs/Handbal/.convert_to_pdf_{team_id}.flag'
+        print('  Content changed - flag file created for PDF conversion')
+        with open(FLAG_FILE, 'w', encoding='utf-8') as f:
+            f.write(f'{FILE_PATH_NL}\n{FILE_PATH_EN}\n')
+    else:
+        print('  No changes detected - PDF conversion not needed')

@@ -10,13 +10,51 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
                                 TableStyle)
+
+def cleanup_old_pdfs(directory, prefix_pattern, keep_file):
+    """ Remove old PDF files matching pattern, except the one to keep """
+    if not os.path.exists(directory):
+        return
+
+    for file in os.listdir(directory):
+        if file.startswith(prefix_pattern) and file.endswith('.pdf'):
+            full_path = os.path.join(directory, file)
+            if full_path != keep_file:
+                try:
+                    os.remove(full_path)
+                    print(f"  Removed old PDF: {file}")
+                except OSError as e:
+                    print(f"  Could not remove {file}: {e}")
+
 # Input en output paths
 script_dir = os.path.dirname(os.path.abspath(__file__))
 markdown_folder = os.path.join(script_dir, "docs", "Handbal")
-markdown_file_list = [file for file in os.listdir(markdown_folder) if file.endswith(".md")]
 
-for markdown_file in markdown_file_list:
-    markdown_file = os.path.join(script_dir, "docs", "Handbal", markdown_file)
+# Check for flag files that indicate which markdown files to convert
+flag_files = [file for file in os.listdir(markdown_folder) if file.endswith(".flag")]
+
+if not flag_files:
+    print("No changes detected - no PDF conversion needed")
+    exit(0)
+
+# Collect all markdown files that need to be converted
+markdown_files_to_convert = []
+for flag_file in flag_files:
+    flag_path = os.path.join(markdown_folder, flag_file)
+    with open(flag_path, 'r', encoding='utf-8') as f:
+        files = [line.strip() for line in f.readlines()]
+        markdown_files_to_convert.extend(files)
+    # Remove the flag file after reading
+    os.remove(flag_path)
+    print(f"Flag bestand verwijderd: {flag_file}")
+
+print(f"\nConverting {len(markdown_files_to_convert)} markdown file(s) to PDF...")
+
+for markdown_file in markdown_files_to_convert:
+    if not os.path.exists(markdown_file):
+        print(f"File not found: {markdown_file}")
+        continue
+
     # Lees de markdown file
     with open(markdown_file, 'r', encoding='utf-8') as f:
         markdown_text = f.read()
@@ -133,7 +171,8 @@ for markdown_file in markdown_file_list:
                     ('FONTSIZE', (0, 1), (-1, -1), 7),
                     ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
                     ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f2f2f2')]),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+                     [colors.white, colors.HexColor('#f2f2f2')]),
                     ('TOPPADDING', (0, 1), (-1, -1), 5),
                     ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
                     ('LEFTPADDING', (0, 0), (-1, -1), 4),
@@ -154,3 +193,12 @@ for markdown_file in markdown_file_list:
     pdf.build(story)
 
     print(f"PDF succesvol aangemaakt: {output_pdf}")
+
+    # Clean up old PDF files with different dates
+    pdf_filename = os.path.basename(output_pdf)
+    # Extract prefix (everything before the last underscore and date)
+    # Format: Rijschema_TEAMID_DATE.pdf or Drivingschedule_TEAMID_DATE.pdf
+    parts = pdf_filename.rsplit('_', 1)  # Split from right
+    if len(parts) == 2:
+        prefix = parts[0]  # e.g., "Rijschema_EHV HS3"
+        cleanup_old_pdfs(markdown_folder, prefix_pattern=prefix, keep_file=output_pdf)
