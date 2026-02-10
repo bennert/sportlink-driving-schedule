@@ -32,7 +32,7 @@ jobs:
       continue-on-error: true
       with:
         name: driving-schedules-md
-        path: docs/Handbal/
+        path: docs/
         workflow: driving_schedule.yml
         if_no_artifact_found: ignore
         
@@ -47,7 +47,7 @@ jobs:
     - name: Check for changes
       id: check_changes
       run: |
-        if ls docs/Handbal/.convert_to_pdf_*.flag 2>/dev/null; then
+        if ls docs/.convert_to_pdf_*.flag 2>/dev/null; then
           echo "changes=true" >> $GITHUB_OUTPUT
           echo "Changes detected - will convert to PDF and send email"
         else
@@ -65,7 +65,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: driving-schedules-md
-        path: docs/Handbal/*.md
+        path: docs/*.md
         retention-days: 30
         
     - name: Upload PDF as artifact
@@ -73,7 +73,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: driving-schedules-pdf
-        path: docs/Handbal/*.pdf
+        path: docs/*.pdf
         retention-days: 90
 
     - name: Send emails per team
