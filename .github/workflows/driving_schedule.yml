@@ -61,10 +61,17 @@ jobs:
       run: |
         python convert_driving_schedule_to_pdf.py
         
+    - name: Upload markdown files as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: driving-schedules-md
+        path: docs/Handbal/*.md
+        retention-days: 30
+        
     - name: Upload PDF as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: driving-schedules-${{ github.run_number }}
+        name: driving-schedules-pdf
         path: docs/Handbal/*.pdf
         retention-days: 90
 
