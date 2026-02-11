@@ -137,7 +137,13 @@ for markdown_file in markdown_files_to_convert:
                                 Paragraph(
                                     f'<link href="{url}" color="blue">{text}</link>', cell_style))
                         else:
-                            parsed_row.append(cell)
+                            # Convert plain text to Paragraph for proper text wrapping
+                            cell_style = ParagraphStyle(
+                                'CellText',
+                                parent=normal_style,
+                                fontSize=7,
+                            )
+                            parsed_row.append(Paragraph(cell, cell_style))
                     table_data.append(parsed_row)
                 i += 1
             i -= 1  # Adjust because we'll increment at the end of the loop
@@ -163,6 +169,7 @@ for markdown_file in markdown_files_to_convert:
                     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                     ('FONTSIZE', (0, 0), (-1, 0), 8),
                     ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
@@ -179,7 +186,6 @@ for markdown_file in markdown_files_to_convert:
                     ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
                     ('LEFTPADDING', (0, 0), (-1, -1), 4),
                     ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-                    ('WORDWRAP', (0, 0), (-1, -1), True),
                 ]))
                 story.append(t)
                 story.append(Spacer(1, 20))
