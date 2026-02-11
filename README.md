@@ -134,3 +134,30 @@ python create_driving_schedule.py
 ```bash
 python convert_driving_schedule_to_pdf.py
 ```
+
+### Adding Team Logos
+
+You can add a team logo to the top of each driving schedule:
+
+1. **Create a logos folder** in the project root:
+   ```bash
+   mkdir logos
+   ```
+
+2. **Add logo files** with the following naming convention:
+   - Convert the team ID to lowercase
+   - Replace spaces with underscores
+   - Use `.png` extension
+   
+   **Examples:**
+   - Team "EHV DS1" → `logos/ehv_ds1.png`
+   - Team "EHV HS1" → `logos/ehv_hs1.png`
+   - Team "My Team U15" → `logos/my_team_u15.png`
+
+3. **Logo requirements:**
+   - Format: PNG (recommended for transparency)
+   - The logo will be displayed at 2cm height with preserved aspect ratio
+   - Logos are automatically detected and added if the file exists
+   - If no logo exists for a team, the schedule is generated without a logo
+
+4. **Run the scripts** as normal - logos will be automatically included in both markdown and PDF outputs

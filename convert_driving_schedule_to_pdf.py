@@ -7,9 +7,9 @@ import re
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
-                                TableStyle)
+from reportlab.lib.units import inch, cm
+from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate, Spacer,
+                                Table, TableStyle)
 
 def cleanup_pdfs(directory):
     """ Remove PDF files """
@@ -98,8 +98,29 @@ for markdown_file in markdown_files_to_convert:
     while i < len(lines):
         line = lines[i].strip()
 
+        # Image (markdown format: ![alt](path))
+        if line.startswith('!['):
+            image_match = re.match(r'!\[([^\]]*)\]\(([^\)]+)\)', line)
+            if image_match:
+                image_path = image_match.group(2)
+                # Convert relative path to absolute if needed
+                if not os.path.isabs(image_path):
+                    image_path = os.path.join(script_dir, image_path)
+                if os.path.exists(image_path):
+                    try:
+                        # Create image with 2cm height, aspect ratio preserved
+                        img = Image(image_path)
+                        aspect_ratio = img.imageWidth / img.imageHeight
+                        img.drawHeight = 2*cm
+                        img.drawWidth = 2*cm * aspect_ratio
+                        img.hAlign = 'LEFT'
+                        story.append(img)
+                        story.append(Spacer(1, 12))
+                    except (IOError, OSError, ValueError) as e:
+                        print(f"  Warning: Could not load image {image_path}: {e}")
+
         # Heading 1
-        if line.startswith('# '):
+        elif line.startswith('# '):
             text = line[2:].strip()
             story.append(Paragraph(text, title_style))
             story.append(Spacer(1, 12))

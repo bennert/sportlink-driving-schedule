@@ -156,7 +156,16 @@ for sportlink_team in sportlink_team_list:
             break
     assert SPORTLINK_TOKEN, f"Sportlink token not found for team {team_id}"
 
+    # Check for team logo
+    logo_filename = team_id.lower().replace(' ', '_') + '.png'
+    logo_path = os.path.join('logos', logo_filename)
+    has_logo = os.path.exists(logo_path)
+
     print(f'\nProcessing {team_id} @ base: {base_location}')
+    if has_logo:
+        print(f'  Logo found: {logo_path}')
+    else:
+        print(f'  No logo found with expected name: {logo_path}') 
     # Presence time before game
     timebefore = timedelta(minutes=warming_up_time)
     calendar = get_sportlink_calendar(SPORTLINK_TOKEN)
@@ -173,7 +182,10 @@ for sportlink_team in sportlink_team_list:
     os.makedirs(docs_dir, exist_ok=True)
 
     # Build content first to check if it changed
-    CONTENT_EN = f'\n# Driving schedule {team_id}\n\n'
+    CONTENT_EN = ''
+    if has_logo:
+        CONTENT_EN += f'![{team_id} Logo]({logo_path})\n\n'
+    CONTENT_EN += f'# Driving schedule {team_id}\n\n'
     CONTENT_EN += f'Base location: {base_location}\n\n'
     CONTENT_EN += f'Warming Up Time: {timebefore}\n\n'
     CONTENT_EN += f'Cost per km: €{travel_cost_per_km}\n\n'
@@ -182,7 +194,10 @@ for sportlink_team in sportlink_team_list:
     for calendar_event in calendar_events:
         CONTENT_EN += '| ' + ' | '.join(calendar_event) + ' |\n'
 
-    CONTENT_NL = f'\n# Rijschema {team_id}\n\n'
+    CONTENT_NL = ''
+    if has_logo:
+        CONTENT_NL += f'![{team_id} Logo]({logo_path})\n\n'
+    CONTENT_NL += f'# Rijschema {team_id}\n\n'
     CONTENT_NL += f'Basis locatie: {base_location}\n\n'
     CONTENT_NL += f'Warming Up Tijd: {timebefore}\n\n'
     CONTENT_NL += f'Kosten per km: €{travel_cost_per_km}\n\n'
