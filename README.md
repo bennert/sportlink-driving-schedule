@@ -137,7 +137,7 @@ python convert_driving_schedule_to_pdf.py
 
 ### Adding Team Logos
 
-You can add a team logo to the top of each driving schedule:
+You can add team and/or club logos to each driving schedule:
 
 1. **Create a logos folder** in the project root:
    ```bash
@@ -147,17 +147,24 @@ You can add a team logo to the top of each driving schedule:
 2. **Add logo files** with the following naming convention:
    - Convert the team ID to lowercase
    - Replace spaces with underscores
-   - Use `.png` extension
+   - Add `.team.png` or `.club.png` suffix
    
    **Examples:**
-   - Team "EHV DS1" → `logos/ehv_ds1.png`
-   - Team "EHV HS1" → `logos/ehv_hs1.png`
-   - Team "My Team U15" → `logos/my_team_u15.png`
+   - Team "EHV DS1" team logo → `logos/ehv_ds1.team.png`
+   - Team "EHV DS1" club logo → `logos/ehv_ds1.club.png`
+   - Team "EHV HS1" club logo → `logos/ehv_hs1.club.png`
+   - Team "My Team U15" team logo → `logos/my_team_u15.team.png`
 
-3. **Logo requirements:**
+3. **Logo placement:**
+   - **Club logo**: Displayed on the left side next to the team information
+   - **Team logo**: Displayed on the right side next to the team information
+   - Both logos are shown horizontally aligned on the right side of the page
+   - You can use one or both logos per team
+
+4. **Logo requirements:**
    - Format: PNG (recommended for transparency)
-   - The logo will be displayed at 2cm height with preserved aspect ratio
+   - Logos will be displayed at 2cm height with preserved aspect ratio
    - Logos are automatically detected and added if the file exists
-   - If no logo exists for a team, the schedule is generated without a logo
+   - If no logo exists for a team, the schedule is generated without it
 
-4. **Run the scripts** as normal - logos will be automatically included in both markdown and PDF outputs
+5. **Run the scripts** as normal - logos will be automatically included in both markdown and PDF outputs

@@ -157,15 +157,26 @@ for sportlink_team in sportlink_team_list:
     assert SPORTLINK_TOKEN, f"Sportlink token not found for team {team_id}"
 
     # Check for team logo
-    logo_filename = team_id.lower().replace(' ', '_') + '.png'
-    logo_path = os.path.join('logos', logo_filename)
-    has_logo = os.path.exists(logo_path)
+    logo_filename_base = team_id.lower().replace(' ', '_')
+    logo_team_filename = logo_filename_base + '.team.png'
+    logo_club_filename = logo_filename_base + '.club.png'
+    logo_team_path = os.path.join('logos', logo_team_filename)
+    logo_club_path = os.path.join('logos', logo_club_filename)
+    # Use forward slashes for markdown compatibility
+    LOGO_TEAM_PATH_MD = f'logos/{logo_team_filename}'
+    LOGO_CLUB_PATH_MD = f'logos/{logo_club_filename}'
+    HAS_LOGO_TEAM = os.path.exists(logo_team_path)
+    HAS_LOGO_CLUB = os.path.exists(logo_club_path)
 
     print(f'\nProcessing {team_id} @ base: {base_location}')
-    if has_logo:
-        print(f'  Logo found: {logo_path}')
+    if HAS_LOGO_TEAM:
+        print(f'  Team logo found: {logo_team_path}')
     else:
-        print(f'  No logo found with expected name: {logo_path}') 
+        print(f'  No team logo found with expected name: {logo_team_path}')
+    if HAS_LOGO_CLUB:
+        print(f'  Club logo found: {logo_club_path}')
+    else:
+        print(f'  No club logo found with expected name: {logo_club_path}')
     # Presence time before game
     timebefore = timedelta(minutes=warming_up_time)
     calendar = get_sportlink_calendar(SPORTLINK_TOKEN)
@@ -182,25 +193,35 @@ for sportlink_team in sportlink_team_list:
     os.makedirs(docs_dir, exist_ok=True)
 
     # Build content first to check if it changed
-    CONTENT_EN = ''
-    if has_logo:
-        CONTENT_EN += f'![{team_id} Logo]({logo_path})\n\n'
-    CONTENT_EN += f'# Driving schedule {team_id}\n\n'
+    CONTENT_EN = f'# Driving schedule {team_id}\n\n'
+    # Info block with optional logos on the right
+    CONTENT_EN += '<!-- INFO_START -->\n'
     CONTENT_EN += f'Base location: {base_location}\n\n'
     CONTENT_EN += f'Warming Up Time: {timebefore}\n\n'
-    CONTENT_EN += f'Cost per km: €{travel_cost_per_km}\n\n'
+    CONTENT_EN += f'Cost per km: €{travel_cost_per_km}\n'
+    CONTENT_EN += '<!-- INFO_END -->\n'
+    if HAS_LOGO_CLUB:
+        CONTENT_EN += f'<!-- CLUB_LOGO: {LOGO_CLUB_PATH_MD} -->\n'
+    if HAS_LOGO_TEAM:
+        CONTENT_EN += f'<!-- TEAM_LOGO: {LOGO_TEAM_PATH_MD} -->\n'
+    CONTENT_EN += '\n'
     CONTENT_EN += get_events_header('en')
     CONTENT_EN += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
     for calendar_event in calendar_events:
         CONTENT_EN += '| ' + ' | '.join(calendar_event) + ' |\n'
 
-    CONTENT_NL = ''
-    if has_logo:
-        CONTENT_NL += f'![{team_id} Logo]({logo_path})\n\n'
-    CONTENT_NL += f'# Rijschema {team_id}\n\n'
+    CONTENT_NL = f'# Rijschema {team_id}\n\n'
+    # Info block with optional logos on the right
+    CONTENT_NL += '<!-- INFO_START -->\n'
     CONTENT_NL += f'Basis locatie: {base_location}\n\n'
     CONTENT_NL += f'Warming Up Tijd: {timebefore}\n\n'
-    CONTENT_NL += f'Kosten per km: €{travel_cost_per_km}\n\n'
+    CONTENT_NL += f'Kosten per km: €{travel_cost_per_km}\n'
+    CONTENT_NL += '<!-- INFO_END -->\n'
+    if HAS_LOGO_CLUB:
+        CONTENT_NL += f'<!-- CLUB_LOGO: {LOGO_CLUB_PATH_MD} -->\n'
+    if HAS_LOGO_TEAM:
+        CONTENT_NL += f'<!-- TEAM_LOGO: {LOGO_TEAM_PATH_MD} -->\n'
+    CONTENT_NL += '\n'
     CONTENT_NL += get_events_header('nl')
     CONTENT_NL += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
     for calendar_event in calendar_events:

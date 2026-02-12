@@ -8,8 +8,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch, cm
-from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate, Spacer,
-                                Table, TableStyle)
+from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 
 def cleanup_pdfs(directory):
     """ Remove PDF files """
@@ -98,8 +97,111 @@ for markdown_file in markdown_files_to_convert:
     while i < len(lines):
         line = lines[i].strip()
 
+        # Info block with optional team logo on the right
+        if line.startswith('<!-- INFO_START -->'):
+            i += 1
+            info_lines = []
+            CLUB_LOGO_PATH = None
+            TEAM_LOGO_PATH = None
+
+            # Collect info lines until INFO_END
+            while i < len(lines) and not lines[i].strip().startswith('<!-- INFO_END -->'):
+                if lines[i].strip() and not lines[i].strip().startswith('<!--'):
+                    info_lines.append(lines[i].strip())
+                i += 1
+
+            # Check for club logo marker
+            if i + 1 < len(lines) and lines[i + 1].strip().startswith('<!-- CLUB_LOGO:'):
+                logo_match = re.match(r'<!-- CLUB_LOGO: (.+) -->', lines[i + 1].strip())
+                if logo_match:
+                    CLUB_LOGO_PATH = logo_match.group(1)
+                    i += 1  # Skip the CLUB_LOGO line
+
+            # Check for team logo marker
+            if i + 1 < len(lines) and lines[i + 1].strip().startswith('<!-- TEAM_LOGO:'):
+                logo_match = re.match(r'<!-- TEAM_LOGO: (.+) -->', lines[i + 1].strip())
+                if logo_match:
+                    TEAM_LOGO_PATH = logo_match.group(1)
+                    i += 1  # Skip the TEAM_LOGO line
+
+            # Create the info block
+            if CLUB_LOGO_PATH or TEAM_LOGO_PATH:
+                INFO_TEXT = '<br/>'.join(info_lines)
+                info_paragraph = Paragraph(INFO_TEXT, normal_style)
+
+                # Load logos
+                logos_to_display = []
+
+                # Club logo (will be on the left)
+                if CLUB_LOGO_PATH:
+                    logo_path_abs = (
+                        CLUB_LOGO_PATH if os.path.isabs(CLUB_LOGO_PATH)
+                        else os.path.join(script_dir, CLUB_LOGO_PATH)
+                    )
+                    if os.path.exists(logo_path_abs):
+                        try:
+                            club_logo = Image(logo_path_abs)
+                            aspect_ratio = club_logo.imageWidth / club_logo.imageHeight
+                            club_logo.drawHeight = 2*cm
+                            club_logo.drawWidth = 2*cm * aspect_ratio
+                            logos_to_display.append(club_logo)
+                        except (IOError, OSError, ValueError) as e:
+                            print(f"  Warning: Could not load club logo {logo_path_abs}: {e}")
+
+                # Team logo (will be on the right)
+                if TEAM_LOGO_PATH:
+                    logo_path_abs = (
+                        TEAM_LOGO_PATH if os.path.isabs(TEAM_LOGO_PATH)
+                        else os.path.join(script_dir, TEAM_LOGO_PATH)
+                    )
+                    if os.path.exists(logo_path_abs):
+                        try:
+                            team_logo = Image(logo_path_abs)
+                            aspect_ratio = team_logo.imageWidth / team_logo.imageHeight
+                            team_logo.drawHeight = 2*cm
+                            team_logo.drawWidth = 2*cm * aspect_ratio
+                            logos_to_display.append(team_logo)
+                        except (IOError, OSError, ValueError) as e:
+                            print(f"  Warning: Could not load team logo {logo_path_abs}: {e}")
+
+                if logos_to_display:
+                    # Create a nested table for logos (horizontal layout)
+                    if len(logos_to_display) == 2:
+                        logos_table = Table([logos_to_display], colWidths=[2.5*inch, 2.5*inch])
+                        logos_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (0, 0), 'RIGHT'),
+                            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ]))
+                    else:
+                        logos_table = logos_to_display[0]
+
+                    # Create table with info left, logos right
+                    info_table = Table([[info_paragraph, logos_table]],
+                                     colWidths=[4.5*inch, 5*inch])
+                    info_table.setStyle(TableStyle([
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+                    ]))
+                    story.append(info_table)
+                    story.append(Spacer(1, 20))
+                else:
+                    # No logos loaded, just add text
+                    for info_line in info_lines:
+                        story.append(Paragraph(info_line, normal_style))
+                        story.append(Spacer(1, 6))
+            else:
+                # No logos, just add info lines
+                for info_line in info_lines:
+                    story.append(Paragraph(info_line, normal_style))
+                    story.append(Spacer(1, 6))
+
+        # Skip HTML comments
+        elif line.startswith('<!--'):
+            pass
+
         # Image (markdown format: ![alt](path))
-        if line.startswith('!['):
+        elif line.startswith('!['):
             image_match = re.match(r'!\[([^\]]*)\]\(([^\)]+)\)', line)
             if image_match:
                 image_path = image_match.group(2)
