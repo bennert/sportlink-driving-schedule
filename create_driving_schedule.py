@@ -2,6 +2,8 @@
 from datetime import datetime, timedelta
 import os
 import hashlib
+import difflib
+from decimal import Decimal, ROUND_HALF_UP
 import requests
 import icalendar
 from dotenv import load_dotenv
@@ -57,7 +59,11 @@ def get_events_from_calendar():
                 (event.get('dtstart').dt - timebefore \
                 - timedelta(minutes=duration)).strftime('%H:%M')
             collection_time = collection_time[:-1] + '0'
-            costs = f"€ {distance * travel_cost_per_km:.2f}"
+            raw_cost = Decimal(str(distance)) * Decimal(str(travel_cost_per_km))
+            rounded_cost = (raw_cost / Decimal('0.05')).quantize(
+                Decimal('1'), rounding=ROUND_HALF_UP
+            ) * Decimal('0.05')
+            costs = f"€ {rounded_cost:.2f}"
             distance_str = f"{distance:.0f}"
             duration_str = f"{duration:.0f}"
 
@@ -91,17 +97,32 @@ def find_old_file(directory, prefix, suffix):
     # Return the most recently modified file
     return max(matching_files, key=os.path.getmtime)
 
-def has_content_changed(directory, prefix, new_content):
-    """ Check if file content has changed by finding old file with prefix """
-    # Find the most recent old file matching the prefix
+def get_markdown_content(directory, prefix):
+    """ Get content of the markdown file """
     old_file = find_old_file(directory, prefix, '.md')
+    if old_file:
+        with open(old_file, 'r', encoding='utf-8') as file_old:
+            return file_old.read()
+    return None
 
-    if not old_file:
-        return True  # No old file found, so content has "changed"
-
-    with open(old_file, 'r', encoding='utf-8') as file_old:
-        old_content = file_old.read()
+def has_content_changed(old_content, new_content):
+    """ Check if file content has changed by finding old file with prefix """
+    if old_content is None:
+        return True
     return get_content_hash(old_content) != get_content_hash(new_content)
+
+def print_content_diff(old_content, new_content, from_label, to_label):
+    """ Print line-by-line unified diff between old and new content """
+    old_lines = (old_content or '').splitlines(keepends=True)
+    new_lines = new_content.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        old_lines,
+        new_lines,
+        fromfile=from_label,
+        tofile=to_label,
+        lineterm=''
+    )
+    print(''.join(diff) if old_lines or new_lines else '  No content to diff')
 
 def cleanup_old_files(directory, prefix, suffix, keep_file):
     """ Remove old files matching pattern, except the one to keep """
@@ -229,11 +250,20 @@ for sportlink_team in sportlink_team_list:
         CONTENT_NL += '| ' + ' | '.join(calendar_event) + ' |\n'
 
     # Check if content changed by comparing with old files (if they exist)
-    CHANGED_NL = has_content_changed(docs_dir, f'Rijschema_{team_id}', CONTENT_NL)
-    CHANGED_EN = has_content_changed(docs_dir, f'Drivingschedule_{team_id}', CONTENT_EN)
+    old_content_nl = get_markdown_content(docs_dir, f'Rijschema_{team_id}')
+    old_content_en = get_markdown_content(docs_dir, f'Drivingschedule_{team_id}')
+    CHANGED_NL = has_content_changed(old_content_nl, CONTENT_NL)
+    CHANGED_EN = has_content_changed(old_content_en, CONTENT_EN)
 
     # Only create flag file if content changed (to trigger PDF conversion)
     if CHANGED_NL or CHANGED_EN:
+        if CHANGED_NL:
+            print('  Dutch content changed - will update file and trigger PDF conversion')
+            print_content_diff(old_content_nl, CONTENT_NL, f'old_Rijschema_{team_id}', f'new_Rijschema_{team_id}')
+        if CHANGED_EN:
+            print('  English content changed - will update file and trigger PDF conversion')
+            print_content_diff(old_content_en, CONTENT_EN, f'old_Drivingschedule_{team_id}', f'new_Drivingschedule_{team_id}')
+
         # Clean up old files with different dates
         cleanup_old_files(docs_dir, f'Rijschema_{team_id}', '.md', FILE_PATH_NL)
         cleanup_old_files(docs_dir, f'Drivingschedule_{team_id}', '.md', FILE_PATH_EN)
