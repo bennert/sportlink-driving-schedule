@@ -123,8 +123,8 @@ assert os.getenv('SPORTLINK_TOKEN_LIST'), 'SPORTLINK_TOKEN_LIST not set'
 assert os.getenv('SPORTLINK_TEAM_LIST'), 'SPORTLINK_TEAM_LIST not set'
 
 # Sportlink - combine token and list
-sportlink_token_list = os.getenv('SPORTLINK_TOKEN_LIST').split(',')
-sportlink_team_list = os.getenv('SPORTLINK_TEAM_LIST').split(',')
+sportlink_token_list = (os.getenv('SPORTLINK_TOKEN_LIST') or '').split(',')
+sportlink_team_list = (os.getenv('SPORTLINK_TEAM_LIST') or '').split(',')
 
 events_header_list = {
     'en': "| Date | Day | Summary | Time @<BASE> | Start | End | Location | Travel Costs " +  \
