@@ -29,7 +29,7 @@ def get_sportlink_calendar(sportlink_calendar_token):
     """ Get events from sportlink """
     url_sportlink = f'https://data.sportlink.com/ical-team?token={sportlink_calendar_token}'
     response = requests.get(url_sportlink, timeout=10)
-    content = response.content
+    content = response.content.decode('utf-8')
     return icalendar.Calendar.from_ical(content)
 
 def get_events_from_calendar():
