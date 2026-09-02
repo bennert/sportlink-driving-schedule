@@ -105,11 +105,26 @@ def get_markdown_content(directory, prefix):
             return file_old.read()
     return None
 
+def strip_travel_metrics(content):
+    """ Remove travel costs/distance/duration columns from table rows (Google Maps values
+    can fluctuate between runs and should not trigger a change) """
+    stripped_lines = []
+    for line in content.splitlines(keepends=True):
+        has_newline = line.endswith('\n')
+        line_no_newline = line[:-1] if has_newline else line
+        if line_no_newline.startswith('| ') and line_no_newline.endswith(' |'):
+            cells = line_no_newline.split(' | ')
+            if len(cells) == 10:
+                line_no_newline = ' | '.join(cells[:-3]) + ' |'
+        stripped_lines.append(line_no_newline + ('\n' if has_newline else ''))
+    return ''.join(stripped_lines)
+
 def has_content_changed(old_content, new_content):
     """ Check if file content has changed by finding old file with prefix """
     if old_content is None:
         return True
-    return get_content_hash(old_content) != get_content_hash(new_content)
+    return get_content_hash(strip_travel_metrics(old_content)) != \
+        get_content_hash(strip_travel_metrics(new_content))
 
 def print_content_diff(old_content, new_content, from_label, to_label):
     """ Print line-by-line unified diff between old and new content """
