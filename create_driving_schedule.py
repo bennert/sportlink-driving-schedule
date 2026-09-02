@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import os
 import hashlib
 import difflib
+import re
 from decimal import Decimal, ROUND_HALF_UP
 import requests
 import icalendar
@@ -105,9 +106,11 @@ def get_markdown_content(directory, prefix):
             return file_old.read()
     return None
 
+LOCATION_LINK_PATTERN = re.compile(r'^\[(.*)\]\(.*\)$')
+
 def strip_travel_metrics(content):
-    """ Remove travel costs/distance/duration columns from table rows (Google Maps values
-    can fluctuate between runs and should not trigger a change) """
+    """ Remove travel costs/distance/duration columns and the Google Maps location URL from
+    table rows (Google Maps values can fluctuate between runs and should not trigger a change) """
     stripped_lines = []
     for line in content.splitlines(keepends=True):
         has_newline = line.endswith('\n')
@@ -115,6 +118,9 @@ def strip_travel_metrics(content):
         if line_no_newline.startswith('| ') and line_no_newline.endswith(' |'):
             cells = line_no_newline.split(' | ')
             if len(cells) == 10:
+                location_match = LOCATION_LINK_PATTERN.match(cells[-4])
+                if location_match:
+                    cells[-4] = location_match.group(1)
                 line_no_newline = ' | '.join(cells[:-3]) + ' |'
         stripped_lines.append(line_no_newline + ('\n' if has_newline else ''))
     return ''.join(stripped_lines)
