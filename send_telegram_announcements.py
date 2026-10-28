@@ -38,12 +38,14 @@ def send_telegram_message(bot_token, chat_id, text):
     except requests.RequestException as error:
         raise RuntimeError('Telegram Bot API request failed') from error
 
-    if response.status_code >= 400:
-        raise RuntimeError(f'Telegram Bot API returned HTTP {response.status_code}')
     try:
         result = response.json()
-    except ValueError as error:
-        raise RuntimeError('Telegram Bot API returned invalid JSON') from error
+    except ValueError:
+        result = None
+    if response.status_code >= 400:
+        description = result.get('description') if isinstance(result, dict) else None
+        detail = f': {description}' if description else ''
+        raise RuntimeError(f'Telegram Bot API returned HTTP {response.status_code}{detail}')
     if not isinstance(result, dict) or not result.get('ok'):
         description = result.get('description', 'unknown error') if isinstance(result, dict) else 'unknown response'
         raise RuntimeError(f'Telegram Bot API rejected the message: {description}')

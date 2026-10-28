@@ -43,6 +43,18 @@ class TelegramDeliveryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Forbidden'):
             send_telegram_message('secret-token', '-1001', 'Weekly match')
 
+    @patch('send_telegram_announcements.requests.post')
+    def test_include_api_description_for_http_400(self, post):
+        response = Mock(status_code=400)
+        response.json.return_value = {
+            'ok': False,
+            'description': 'Bad Request: chat not found',
+        }
+        post.return_value = response
+
+        with self.assertRaisesRegex(RuntimeError, 'HTTP 400: Bad Request: chat not found'):
+            send_telegram_message('secret-token', '-1001', 'Weekly match')
+
 
 if __name__ == '__main__':
     unittest.main()
