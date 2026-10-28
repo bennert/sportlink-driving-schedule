@@ -9,16 +9,34 @@ from decimal import Decimal, ROUND_HALF_UP
 import requests
 import icalendar
 from dotenv import load_dotenv
+from google_maps_cache import (
+    get_or_resolve_place_id,
+    load_place_id_cache,
+    save_place_id_cache,
+)
 from telegram_schedule import AMSTERDAM, select_matches_in_next_seven_days
 
 load_dotenv()
 
+PLACE_ID_CACHE_PATH = os.path.join('docs', 'google_maps_place_ids.json')
+place_id_cache = load_place_id_cache(PLACE_ID_CACHE_PATH)
+
 def get_google_maps_url(place):
     """ Get google maps url """
-    url_maps_place = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' + \
-        'input=' + place + \
-        f'&inputtype=textquery&fields=place_id&key={os.getenv("MAPS_API_KEY")}'
-    response_place = requests.get(url_maps_place, timeout=10).json()['candidates'][0]['place_id']
+    def resolve_place_id(location):
+        response = requests.get(
+            'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
+            params={
+                'input': location,
+                'inputtype': 'textquery',
+                'fields': 'place_id',
+                'key': os.getenv('MAPS_API_KEY'),
+            },
+            timeout=10,
+        ).json()
+        return response['candidates'][0]['place_id']
+
+    response_place = get_or_resolve_place_id(place, place_id_cache, resolve_place_id)
     return 'https://www.google.com/maps/search/?api=1&query=Google&query_place_id='+ response_place
 
 def get_google_maps_distance_and_duration(place):
@@ -316,3 +334,5 @@ for sportlink_team in sportlink_team_list:
 
 with open(os.path.join('docs', 'telegram_announcements.json'), 'w', encoding='utf-8') as output_file:
     json.dump(telegram_announcements, output_file, ensure_ascii=False)
+
+save_place_id_cache(PLACE_ID_CACHE_PATH, place_id_cache)

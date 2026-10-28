@@ -138,6 +138,10 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Google Maps place ID cache
+
+GitHub Actions persists a cache mapping normalized Sportlink locations to Google Maps `place_id` values. It does not store Distance Matrix distances or durations. Those route values are requested again during each schedule run. The cache is stored as the `google-maps-place-id-cache` workflow artifact.
+
 ### Generate driving schedule
 ```bash
 python create_driving_schedule.py

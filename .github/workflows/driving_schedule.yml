@@ -35,6 +35,15 @@ jobs:
         path: docs/
         workflow: driving_schedule.yml
         if_no_artifact_found: ignore
+
+    - name: Download previous Google Maps place ID cache
+      uses: dawidd6/action-download-artifact@v3
+      continue-on-error: true
+      with:
+        name: google-maps-place-id-cache
+        path: docs/
+        workflow: driving_schedule.yml
+        if_no_artifact_found: ignore
         
     - name: Create driving schedule
       id: create_schedule
@@ -68,6 +77,14 @@ jobs:
         name: driving-schedules-md
         path: docs/*.md
         retention-days: 30
+
+    - name: Upload Google Maps place ID cache
+      if: steps.create_schedule.outcome == 'success'
+      uses: actions/upload-artifact@v4
+      with:
+        name: google-maps-place-id-cache
+        path: docs/google_maps_place_ids.json
+        retention-days: 90
         
     - name: Upload PDF as artifact
       if: steps.check_changes.outputs.changes == 'true'
