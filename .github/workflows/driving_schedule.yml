@@ -105,7 +105,8 @@ jobs:
         EMAIL_SUBJECT: ${{ vars.EMAIL_SUBJECT }}
 
     - name: Send weekly Telegram announcements
-      if: always() && github.event_name == 'schedule' && steps.create_schedule.outcome == 'success'
+      # TEMP: enable Telegram testing on push, manual, and scheduled runs.
+      if: always() && steps.create_schedule.outcome == 'success'
       run: python send_telegram_announcements.py
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
