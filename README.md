@@ -64,6 +64,15 @@ This project requires the following environment variables:
    - Generate a new app password for "Mail"
    - Copy the generated 16-character password
 
+6. **TELEGRAM_BOT_TOKEN**: Token for the Telegram bot that sends weekly match announcements
+   - Create a bot with [BotFather](https://telegram.me/BotFather)
+   - Store the token as a GitHub Actions secret; do not commit it to the repository
+
+7. **TELEGRAM_CHAT_LIST**: Comma-separated team-to-chat mapping for Telegram announcements
+   - Format: `TEAM_ID:CHAT_ID;CHAT_ID,TEAM_ID2:CHAT_ID2`
+   - Example: `EHV DS1:-1001234567890;123456789,EHV HS1:-1009876543210`
+   - A private recipient must start the bot first; add the bot to a group before using that group's chat ID
+
 #### Setting up Secrets Locally
 
 Create a `.env` file in the root directory:
@@ -79,6 +88,8 @@ EMAIL_USERNAME=your.email@gmail.com
 EMAIL_PASSWORD=your_app_password_here
 EMAIL_SUBJECT=Driving Schedule of your club
 EMAIL_FROM=Scheduler <your.email@gmail.com>
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_LIST=TEAM_ID:CHAT_ID;CHAT_ID,TEAM_ID2:CHAT_ID2
 ```
 
 #### Setting up Secrets in GitHub
@@ -93,6 +104,8 @@ If you're using GitHub Actions or want to store secrets securely:
    - Name: `SPORTLINK_TOKEN_LIST`, Value: Your team Sportlink tokens (format: `TEAM_ID:token,TEAM_ID2:token2`)
    - Name: `EMAIL_USERNAME`, Value: your Gmail address
    - Name: `EMAIL_PASSWORD`, Value: your Gmail app password
+   - Name: `TELEGRAM_BOT_TOKEN`, Value: your Telegram bot token
+   - Name: `TELEGRAM_CHAT_LIST`, Value: your team-to-chat mappings
 
 5. Click on **Variables** tab and add the following variables:
    - Name: `SPORTLINK_TEAM_LIST`, Value: your team configuration(s) including email per team

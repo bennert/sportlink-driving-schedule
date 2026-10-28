@@ -37,6 +37,7 @@ jobs:
         if_no_artifact_found: ignore
         
     - name: Create driving schedule
+      id: create_schedule
       run: |
         python create_driving_schedule.py
       env:
@@ -85,3 +86,10 @@ jobs:
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         EMAIL_FROM: ${{ vars.EMAIL_FROM }}
         EMAIL_SUBJECT: ${{ vars.EMAIL_SUBJECT }}
+
+    - name: Send weekly Telegram announcements
+      if: always() && github.event_name == 'schedule' && steps.create_schedule.outcome == 'success'
+      run: python send_telegram_announcements.py
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_LIST: ${{ secrets.TELEGRAM_CHAT_LIST }}

@@ -1,5 +1,6 @@
 """ Maak rijschema voor team op basis van sportlink kalender en google maps afstand en tijd """
 from datetime import datetime, timedelta
+import json
 import os
 import hashlib
 import difflib
@@ -8,6 +9,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import requests
 import icalendar
 from dotenv import load_dotenv
+from telegram_schedule import AMSTERDAM, select_matches_in_next_seven_days
 
 load_dotenv()
 
@@ -185,6 +187,9 @@ weekday_translation = {
     'Sunday': 'Zondag'
 }
 
+telegram_announcements = []
+announcement_run_time = datetime.now(AMSTERDAM)
+
 for sportlink_team in sportlink_team_list:
     team_id = sportlink_team.split(':')[0]
     base_location = sportlink_team.split(':')[1]
@@ -225,6 +230,13 @@ for sportlink_team in sportlink_team_list:
     calendar_events = get_events_from_calendar()
     # Sort events on date
     calendar_events.sort(key=lambda x: x[0])
+    selected_matches = select_matches_in_next_seven_days(
+        calendar_events, announcement_run_time
+    )
+    telegram_announcements.append({
+        'team_id': team_id,
+        'matches': [match.copy() for match in selected_matches]
+    })
 
     today = datetime.now().strftime("%Y-%m-%d")
 
@@ -301,3 +313,6 @@ for sportlink_team in sportlink_team_list:
             f.write(f'{FILE_PATH_NL}\n{FILE_PATH_EN}\n{team_email}\n')
     else:
         print('  No changes detected - PDF conversion not needed')
+
+with open(os.path.join('docs', 'telegram_announcements.json'), 'w', encoding='utf-8') as output_file:
+    json.dump(telegram_announcements, output_file, ensure_ascii=False)

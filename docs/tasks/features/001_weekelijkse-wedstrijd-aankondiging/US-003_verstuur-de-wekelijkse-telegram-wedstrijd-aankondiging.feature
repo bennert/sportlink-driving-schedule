@@ -17,3 +17,10 @@ Feature: Send the Weekly Telegram Match Announcement
     When the weekly notification step runs
     Then the workflow reports the delivery as failed
       And the rejected message is not reported as successfully sent
+
+  Scenario: Do not send announcements for a push workflow run
+    Given the workflow was triggered by a push to the main branch
+      And the generated schedule contains a match in the next seven days
+    When the Telegram notification step evaluates the workflow event
+    Then no Telegram message is sent
+      And the weekly scheduled run remains the only automatic delivery trigger

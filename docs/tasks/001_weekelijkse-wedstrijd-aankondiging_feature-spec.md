@@ -62,12 +62,13 @@ I WANT to receive the weekly match announcement on Telegram
 SO THAT I have the match and travel details without checking the PDF
 ```
 
-**Complexity:** M
+**Complexity:** L
 **Feature File:** `docs/tasks/features/001_weekelijkse-wedstrijd-aankondiging/US-003_verstuur-de-wekelijkse-telegram-wedstrijd-aankondiging.feature`
 **Acceptance Focus:**
 
 - Send the announcement on each scheduled Monday workflow run when matches and eligible recipients exist, even if the driving schedule has not changed.
 - Send only to the configured Telegram chat destinations for that team.
+- Do not send announcements for push or manual workflow runs.
 - Report Bot API failures as failed workflow delivery; do not report a rejected request as successfully sent.
 **Dependencies:** US-001, US-002; Telegram bot token and configured chat destinations.
 **Notes:** The existing workflow runs at 06:00 UTC on Mondays. Confirm the local delivery-time expectation and check Telegram Bot API rate limits before implementation. This story does not promise exactly-once delivery across workflow retries.
