@@ -95,7 +95,8 @@ jobs:
         retention-days: 90
 
     - name: Send emails per team
-      if: steps.check_changes.outputs.changes == 'true'
+      # TEMP: disable email delivery while Telegram is being tested.
+      if: ${{ false }}
       run: |
         python send_team_emails.py
       env:
