@@ -26,7 +26,7 @@ def format_announcement(team_id, matches):
             f'Aanvang: {match[4]}\n'
             f'Verzamelen: {match[3]}\n'
             f'Locatie: {location}\n'
-            f'Reistijd: {match[9]} min | Afstand: {match[8]} km | Kosten: {match[7]}'
+            f'Reiskosten: {match[7]}'
         )
     return f'Wedstrijden {team_id} (komende 7 dagen):\n\n' + '\n\n'.join(sections)
 

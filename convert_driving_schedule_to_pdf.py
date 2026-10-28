@@ -281,8 +281,6 @@ for markdown_file in markdown_files_to_convert:
                     0.5*inch,   # Einde
                     2.2*inch,   # Locatie
                     0.7*inch,   # Reis kosten
-                    0.6*inch,   # Reis km
-                    0.7*inch,   # Reis minuten
                 ]
 
                 # Create table with styling en kolombreedtes

@@ -13,7 +13,7 @@ Feature: Select Matches for the Coming Seven Days
     Given a match inside the seven-day window has a calculated driving schedule
     When its announcement details are prepared
     Then the details include opponent, date, start time, and location
-      And the details include collection time, travel time, distance, and travel costs
+      And the details include collection time and travel costs
 
   Scenario: No matches fall inside the seven-day window
     Given the Sportlink calendar has no match inside the next seven days

@@ -49,7 +49,7 @@ SO THAT I can plan match attendance and travel
 **Acceptance Focus:**
 
 - Select matches starting at or after the workflow run time and before seven days after that time, using the Europe/Amsterdam timezone.
-- Include opponent, date, start time, location, collection time, travel time, distance, and travel costs for each selected match.
+- Include opponent, date, start time, location, collection time, and travel costs for each selected match.
 - Produce no announcement when there are no matches in the window.
 **Dependencies:** Existing Sportlink calendar retrieval and rijschema calculations.
 **Notes:** The seven-day window is a rolling interval from the scheduled workflow run, not the remainder of the Monday-to-Sunday calendar week. Do not include driver names; no reliable driver assignment source exists today.

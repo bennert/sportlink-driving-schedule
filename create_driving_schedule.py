@@ -4,7 +4,6 @@ import json
 import os
 import hashlib
 import difflib
-import re
 from decimal import Decimal, ROUND_HALF_UP
 import requests
 import icalendar
@@ -14,6 +13,7 @@ from google_maps_cache import (
     load_place_id_cache,
     save_place_id_cache,
 )
+from schedule_content import strip_travel_metrics
 from telegram_schedule import AMSTERDAM, select_matches_in_next_seven_days
 
 load_dotenv()
@@ -69,8 +69,6 @@ def get_events_from_calendar():
         weekday = event.get('dtstart').dt.strftime('%A')
         if base_location in location:
             collection_time = (event.get('dtstart').dt - timebefore).strftime('%H:%M')
-            distance_str = '0'
-            duration_str = '0'
             costs = '€ 0'
         else:
             distance, duration = get_google_maps_distance_and_duration(location)
@@ -85,12 +83,9 @@ def get_events_from_calendar():
                 Decimal('1'), rounding=ROUND_HALF_UP
             ) * Decimal('0.05')
             costs = f"€ {rounded_cost:.2f}"
-            distance_str = f"{distance:.0f}"
-            duration_str = f"{duration:.0f}"
 
         singleevent = [
-            date, weekday, summary, collection_time, start, end, location_link,
-            costs, distance_str, duration_str]
+            date, weekday, summary, collection_time, start, end, location_link, costs]
         events.append(singleevent)
     return events
 
@@ -125,25 +120,6 @@ def get_markdown_content(directory, prefix):
         with open(old_file, 'r', encoding='utf-8') as file_old:
             return file_old.read()
     return None
-
-LOCATION_LINK_PATTERN = re.compile(r'^\[(.*)\]\(.*\)$')
-
-def strip_travel_metrics(content):
-    """ Remove travel costs/distance/duration columns and the Google Maps location URL from
-    table rows (Google Maps values can fluctuate between runs and should not trigger a change) """
-    stripped_lines = []
-    for line in content.splitlines(keepends=True):
-        has_newline = line.endswith('\n')
-        line_no_newline = line[:-1] if has_newline else line
-        if line_no_newline.startswith('| ') and line_no_newline.endswith(' |'):
-            cells = line_no_newline.split(' | ')
-            if len(cells) == 10:
-                location_match = LOCATION_LINK_PATTERN.match(cells[-4])
-                if location_match:
-                    cells[-4] = location_match.group(1)
-                line_no_newline = ' | '.join(cells[:-3]) + ' |'
-        stripped_lines.append(line_no_newline + ('\n' if has_newline else ''))
-    return ''.join(stripped_lines)
 
 def has_content_changed(old_content, new_content):
     """ Check if file content has changed by finding old file with prefix """
@@ -189,10 +165,8 @@ sportlink_token_list = (os.getenv('SPORTLINK_TOKEN_LIST') or '').split(',')
 sportlink_team_list = (os.getenv('SPORTLINK_TEAM_LIST') or '').split(',')
 
 events_header_list = {
-    'en': "| Date | Day | Summary | Time @<BASE> | Start | End | Location | Travel Costs " +  \
-        "| Travel kms | Travel Minutes |\n",
-    'nl': "| Datum | Dag | Samenvatting | Tijd @<BASE> | Start | Einde | Locatie | Reis kosten " + \
-        "| Reis km | Reis minuten |\n"
+    'en': "| Date | Day | Summary | Time @<BASE> | Start | End | Location | Travel Costs |\n",
+    'nl': "| Datum | Dag | Samenvatting | Tijd @<BASE> | Start | Einde | Locatie | Reis kosten |\n"
 }
 
 weekday_translation = {
@@ -278,7 +252,7 @@ for sportlink_team in sportlink_team_list:
         CONTENT_EN += f'<!-- TEAM_LOGO: {LOGO_TEAM_PATH_MD} -->\n'
     CONTENT_EN += '\n'
     CONTENT_EN += get_events_header('en')
-    CONTENT_EN += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
+    CONTENT_EN += '| --- | --- | --- | --- | --- | --- | --- | --- |\n'
     for calendar_event in calendar_events:
         CONTENT_EN += '| ' + ' | '.join(calendar_event) + ' |\n'
 
@@ -295,7 +269,7 @@ for sportlink_team in sportlink_team_list:
         CONTENT_NL += f'<!-- TEAM_LOGO: {LOGO_TEAM_PATH_MD} -->\n'
     CONTENT_NL += '\n'
     CONTENT_NL += get_events_header('nl')
-    CONTENT_NL += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
+    CONTENT_NL += '| --- | --- | --- | --- | --- | --- | --- | --- |\n'
     for calendar_event in calendar_events:
         calendar_event[1] = weekday_translation[calendar_event[1]]
         CONTENT_NL += '| ' + ' | '.join(calendar_event) + ' |\n'
