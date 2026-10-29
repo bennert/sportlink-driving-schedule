@@ -11,6 +11,7 @@ from telegram_config import get_team_chat_ids, parse_telegram_chat_list
 
 load_dotenv()
 
+ANNOUNCEMENTS_PATH = os.path.join('docs', 'telegram_announcements.json')
 LOCATION_LINK_PATTERN = re.compile(r'^\[(.*)\]\((.*)\)$')
 DUTCH_WEEKDAYS = (
     'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'
@@ -51,6 +52,28 @@ def format_announcement(team_id, matches):
     return f'{heading}\n\n' + '\n\n'.join(sections)
 
 
+def _markdown_cell(value):
+    return str(value).replace('\\', '\\\\').replace('|', '\\|').replace('\r', ' ').replace('\n', ' ')
+
+
+def format_delivery_summary(results):
+    lines = [
+        '## Telegram delivery results',
+        '',
+        '| Team | Destination | Result | Details |',
+        '| --- | --- | --- | --- |',
+    ]
+    if not results:
+        lines.append('| - | - | Not sent | No team notifications were processed. |')
+    for result in results:
+        lines.append(
+            '| ' + ' | '.join(_markdown_cell(result[field]) for field in (
+                'team_id', 'destination', 'status', 'details'
+            )) + ' |'
+        )
+    return '\n'.join(lines)
+
+
 def send_telegram_message(bot_token, chat_id, text):
     url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     try:
@@ -77,10 +100,9 @@ def main():
         print('ERROR: TELEGRAM_BOT_TOKEN not set')
         return 1
 
-    announcements_path = os.path.join('docs', 'telegram_announcements.json')
     try:
         destinations = parse_telegram_chat_list(os.getenv('TELEGRAM_CHAT_LIST'))
-        with open(announcements_path, 'r', encoding='utf-8') as file:
+        with open(ANNOUNCEMENTS_PATH, 'r', encoding='utf-8') as file:
             announcements = json.load(file)
     except (OSError, ValueError) as error:
         print(f'ERROR: {error}')
@@ -88,6 +110,7 @@ def main():
 
     failed = False
     sent_count = 0
+    delivery_results = []
     for announcement in announcements:
         team_id = announcement['team_id']
         matches = announcement['matches']
@@ -95,6 +118,12 @@ def main():
             chat_ids = get_team_chat_ids(destinations, team_id)
         except ValueError as error:
             print(f'ERROR for {team_id}: {error}')
+            delivery_results.append({
+                'team_id': team_id,
+                'destination': 'not configured',
+                'status': 'Failed',
+                'details': str(error),
+            })
             failed = True
             continue
 
@@ -103,10 +132,34 @@ def main():
             try:
                 send_telegram_message(bot_token, chat_id, message)
             except RuntimeError as error:
-                print(f'Failed Telegram delivery for {team_id}: {error}')
+                safe_error = str(error).replace(bot_token, '[REDACTED]')
+                print(f'Failed Telegram delivery for {team_id}: {safe_error}')
+                delivery_results.append({
+                    'team_id': team_id,
+                    'destination': chat_id,
+                    'status': 'Failed',
+                    'details': safe_error,
+                })
                 failed = True
             else:
                 sent_count += 1
+                delivery_results.append({
+                    'team_id': team_id,
+                    'destination': chat_id,
+                    'status': 'Sent',
+                    'details': 'Telegram accepted the message.',
+                })
+
+    summary = format_delivery_summary(delivery_results)
+    print(summary)
+    summary_path = os.getenv('GITHUB_STEP_SUMMARY')
+    if summary_path:
+        try:
+            with open(summary_path, 'a', encoding='utf-8') as summary_file:
+                summary_file.write(summary + '\n')
+        except OSError:
+            print('ERROR: Could not write the GitHub Actions delivery summary.')
+            failed = True
 
     if failed:
         return 1

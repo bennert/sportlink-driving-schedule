@@ -1,11 +1,18 @@
 import io
 import json
 import os
+import tempfile
 import unittest
 from contextlib import redirect_stdout
-from unittest.mock import Mock, call, mock_open, patch
+from pathlib import Path
+from unittest.mock import Mock, call, patch
 
-from send_telegram_announcements import format_announcement, main, send_telegram_message
+from send_telegram_announcements import (
+    format_announcement,
+    format_delivery_summary,
+    main,
+    send_telegram_message,
+)
 
 
 class TelegramDeliveryTests(unittest.TestCase):
@@ -18,15 +25,19 @@ class TelegramDeliveryTests(unittest.TestCase):
         )
 
     def test_send_empty_announcement_to_every_team_destination(self):
-        announcement_data = json.dumps([{'team_id': 'EHV HS1', 'matches': []}])
-        output = io.StringIO()
-        with patch.dict(os.environ, {
-            'TELEGRAM_BOT_TOKEN': 'test-token',
-            'TELEGRAM_CHAT_LIST': 'EHV HS1:-1001;-1002',
-        }, clear=True), patch('builtins.open', mock_open(read_data=announcement_data)), \
-                patch('send_telegram_announcements.send_telegram_message') as send_message, \
-                redirect_stdout(output):
-            result = main()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            announcements_path = Path(temporary_directory) / 'announcements.json'
+            announcements_path.write_text(
+                json.dumps([{'team_id': 'EHV HS1', 'matches': []}]), encoding='utf-8'
+            )
+            output = io.StringIO()
+            with patch.dict(os.environ, {
+                'TELEGRAM_BOT_TOKEN': 'test-token',
+                'TELEGRAM_CHAT_LIST': 'EHV HS1:-1001;-1002',
+            }, clear=True), patch('send_telegram_announcements.ANNOUNCEMENTS_PATH', str(announcements_path)), \
+                    patch('send_telegram_announcements.send_telegram_message') as send_message, \
+                    redirect_stdout(output):
+                result = main()
 
         self.assertEqual(0, result)
         self.assertEqual(2, send_message.call_count)
@@ -36,6 +47,51 @@ class TelegramDeliveryTests(unittest.TestCase):
             call('test-token', '-1002', message),
         ])
         self.assertIn('Sent 2 Telegram announcement(s)', output.getvalue())
+
+    def test_summarize_success_and_failure_per_destination(self):
+        summary = format_delivery_summary([
+            {
+                'team_id': 'EHV HS1', 'destination': '-1001', 'status': 'Sent',
+                'details': 'Telegram accepted the message.',
+            },
+            {
+                'team_id': 'EHV HS1', 'destination': '-1002', 'status': 'Failed',
+                'details': 'Telegram returned HTTP 400: chat not found.',
+            },
+        ])
+
+        self.assertIn('| EHV HS1 | -1001 | Sent |', summary)
+        self.assertIn('| EHV HS1 | -1002 | Failed | Telegram returned HTTP 400: chat not found. |', summary)
+
+    def test_partial_delivery_failure_is_summarized_and_fails_run(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            announcements_path = Path(temporary_directory) / 'announcements.json'
+            summary_path = Path(temporary_directory) / 'summary.md'
+            announcements_path.write_text(
+                json.dumps([{'team_id': 'EHV HS1', 'matches': []}]), encoding='utf-8'
+            )
+            output = io.StringIO()
+
+            def send_message(bot_token, chat_id, _message):
+                if chat_id == '-1002':
+                    raise RuntimeError(f'Telegram error for {bot_token}: chat not found')
+
+            with patch.dict(os.environ, {
+                'TELEGRAM_BOT_TOKEN': 'top-secret-token',
+                'TELEGRAM_CHAT_LIST': 'EHV HS1:-1001;-1002',
+                'GITHUB_STEP_SUMMARY': str(summary_path),
+            }, clear=True), patch('send_telegram_announcements.ANNOUNCEMENTS_PATH', str(announcements_path)), \
+                    patch('send_telegram_announcements.send_telegram_message', side_effect=send_message), \
+                    redirect_stdout(output):
+                result = main()
+
+            summary = summary_path.read_text(encoding='utf-8')
+            self.assertEqual(1, result)
+            self.assertIn('| EHV HS1 | -1001 | Sent |', summary)
+            self.assertIn('| EHV HS1 | -1002 | Failed |', summary)
+            self.assertIn('[REDACTED]: chat not found', summary)
+            self.assertNotIn('top-secret-token', summary)
+            self.assertIn('## Telegram delivery results', output.getvalue())
 
     def test_format_announcement_includes_match_and_travel_details(self):
         match = [
