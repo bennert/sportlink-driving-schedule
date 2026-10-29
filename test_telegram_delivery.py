@@ -45,12 +45,28 @@ class TelegramDeliveryTests(unittest.TestCase):
 
         message = format_announcement('EHV DS1', [match])
 
-        for detail in ('EHV DS1', 'Opponent-Team', '2026-11-01', '11:00', '10:00',
+        for detail in ('EHV DS1', 'Opponent-Team', 'zondag 1 november 2026',
+                   'Aanvang: 11:00', 'Verzamelen: 10:00',
                        'Sports Hall', 'https://maps.example/match', '€ 4.20'):
             with self.subTest(detail=detail):
                 self.assertIn(detail, message)
         self.assertNotIn('Reistijd:', message)
         self.assertNotIn('Afstand:', message)
+
+    def test_format_announcement_separates_each_match(self):
+        first_match = [
+            '2026-11-01', 'Sunday', 'Opponent-One', '10:00', '11:00', '13:00',
+            '[Sports Hall](https://maps.example/one)', '€ 4.20'
+        ]
+        second_match = [
+            '2026-11-02', 'Monday', 'Opponent-Two', '16:00', '17:00', '19:00',
+            '[Other Hall](https://maps.example/two)', '€ 2.10'
+        ]
+
+        message = format_announcement('EHV DS1', [first_match, second_match])
+
+        self.assertIn('€ 4.20\n\nOpponent-Two', message)
+        self.assertIn('maandag 2 november 2026', message)
 
     @patch('send_telegram_announcements.requests.post')
     def test_send_posts_to_telegram_bot_api(self, post):

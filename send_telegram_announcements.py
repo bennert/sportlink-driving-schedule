@@ -2,6 +2,7 @@ import json
 import os
 import re
 import sys
+from datetime import date
 
 import requests
 from dotenv import load_dotenv
@@ -11,6 +12,21 @@ from telegram_config import get_team_chat_ids, parse_telegram_chat_list
 load_dotenv()
 
 LOCATION_LINK_PATTERN = re.compile(r'^\[(.*)\]\((.*)\)$')
+DUTCH_WEEKDAYS = (
+    'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'
+)
+DUTCH_MONTHS = (
+    'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+    'juli', 'augustus', 'september', 'oktober', 'november', 'december'
+)
+
+
+def format_match_date(date_value):
+    match_date = date.fromisoformat(date_value)
+    return (
+        f'{DUTCH_WEEKDAYS[match_date.weekday()]} {match_date.day} '
+        f'{DUTCH_MONTHS[match_date.month - 1]} {match_date.year}'
+    )
 
 
 def format_announcement(team_id, matches):
@@ -26,7 +42,7 @@ def format_announcement(team_id, matches):
             location = f'{location_link.group(1)}\nGoogle Maps: {location_link.group(2)}'
         sections.append(
             f'{match[2]}\n'
-            f'Datum: {match[0]}\n'
+            f'Datum: {format_match_date(match[0])}\n'
             f'Aanvang: {match[4]}\n'
             f'Verzamelen: {match[3]}\n'
             f'Locatie: {location}\n'
