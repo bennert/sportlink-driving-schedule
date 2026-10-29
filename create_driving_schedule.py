@@ -8,6 +8,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import requests
 import icalendar
 from dotenv import load_dotenv
+from configuration_validation import validate_configuration
 from google_maps_cache import (
     get_or_resolve_place_id,
     load_place_id_cache,
@@ -17,6 +18,10 @@ from schedule_content import strip_travel_metrics
 from telegram_schedule import AMSTERDAM, select_matches_in_next_seven_days
 
 load_dotenv()
+
+configuration_errors = validate_configuration(os.environ)
+if configuration_errors:
+    raise SystemExit('Invalid configuration:\n- ' + '\n- '.join(configuration_errors))
 
 PLACE_ID_CACHE_PATH = os.path.join('docs', 'google_maps_place_ids.json')
 place_id_cache = load_place_id_cache(PLACE_ID_CACHE_PATH)
