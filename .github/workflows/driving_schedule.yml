@@ -11,10 +11,20 @@ on:
 jobs:
   generate-schedule:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Configure GitHub Pages
+      uses: actions/configure-pages@v5
       
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -80,6 +90,27 @@ jobs:
       if: steps.check_changes.outputs.changes == 'true'
       run: |
         python convert_driving_schedule_to_pdf.py
+
+    - name: Download previous schedule PDFs
+      uses: dawidd6/action-download-artifact@v3
+      continue-on-error: true
+      with:
+        name: driving-schedules-pdf
+        path: previous-pdfs/
+        workflow: driving_schedule.yml
+        if_no_artifact_found: ignore
+
+    - name: Build stable schedule pages
+      run: python publish_schedule_pages.py
+
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: site
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
         
     - name: Upload markdown files as artifact
       uses: actions/upload-artifact@v4

@@ -43,3 +43,5 @@ Thumbs.db
 # PDF output (optioneel - verwijder als je PDFs wilt committen)
 *.pdf
 docs/
+site/
+previous-pdfs/
