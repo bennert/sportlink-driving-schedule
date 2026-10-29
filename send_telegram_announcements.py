@@ -14,6 +14,10 @@ LOCATION_LINK_PATTERN = re.compile(r'^\[(.*)\]\((.*)\)$')
 
 
 def format_announcement(team_id, matches):
+    heading = f'Wedstrijden {team_id} (komende 7 dagen):'
+    if not matches:
+        return f'{heading}\n\nGeen wedstrijden gepland.'
+
     sections = []
     for match in matches:
         location = match[6]
@@ -28,7 +32,7 @@ def format_announcement(team_id, matches):
             f'Locatie: {location}\n'
             f'Reiskosten: {match[7]}'
         )
-    return f'Wedstrijden {team_id} (komende 7 dagen):\n\n' + '\n\n'.join(sections)
+    return f'{heading}\n\n' + '\n\n'.join(sections)
 
 
 def send_telegram_message(bot_token, chat_id, text):
@@ -71,8 +75,6 @@ def main():
     for announcement in announcements:
         team_id = announcement['team_id']
         matches = announcement['matches']
-        if not matches:
-            continue
         try:
             chat_ids = get_team_chat_ids(destinations, team_id)
         except ValueError as error:
