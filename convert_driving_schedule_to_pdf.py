@@ -4,12 +4,16 @@ Script om markdown rijschema te converteren naar PDF
 import os
 import re
 import sys
+from html import escape
+from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch, cm
-from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
+from schedule_change_store import load_change_report, verify_report_source
+from schedule_change_text import HEADINGS, report_lines
 
 def cleanup_pdfs(directory):
     """ Remove PDF files """
@@ -68,6 +72,16 @@ for markdown_file in markdown_files_to_convert:
     # Lees de markdown file
     with open(markdown_file, 'r', encoding='utf-8') as f:
         markdown_text = f.read()
+    schedule_name = re.fullmatch(
+        r'(Rijschema|Drivingschedule)_(.+)_\d{4}-\d{2}-\d{2}\.md', Path(markdown_file).name)
+    if not schedule_name:
+        raise ValueError(f'Cannot identify team for {markdown_file}')
+    language = 'nl' if schedule_name.group(1) == 'Rijschema' else 'en'
+    team_id = schedule_name.group(2)
+    report_required = (Path(markdown_folder) / f'.convert_to_pdf_{team_id}.flag').exists()
+    change_report = load_change_report(markdown_folder, team_id, required=report_required)
+    if change_report:
+        verify_report_source(change_report, markdown_file, markdown_text)
     output_pdf = markdown_file.replace('.md', '.pdf')
     # Create PDF document met landscape orientatie voor betere tabel weergave
     pdf = SimpleDocTemplate(output_pdf, pagesize=landscape(A4))
@@ -326,6 +340,18 @@ for markdown_file in markdown_files_to_convert:
             story.append(Spacer(1, 6))
 
         i += 1
+
+    story.append(PageBreak())
+    if change_report:
+        change_lines = report_lines(change_report, language)
+    else:
+        change_lines = [f'{HEADINGS[language]} - {team_id}',
+                        'Wijzigingsoverzicht niet beschikbaar' if language == 'nl'
+                        else 'Change report unavailable']
+    story.append(Paragraph(escape(change_lines[0]), heading_style))
+    for change_line in change_lines[1:]:
+        story.append(Paragraph(escape(change_line), normal_style))
+        story.append(Spacer(1, 6))
 
     # Build PDF
     pdf.build(story)
