@@ -2,7 +2,7 @@ from collections import Counter
 from datetime import datetime
 import re
 
-from schedule_content import LOCATION_LINK_PATTERN
+from schedule_content import LOCATION_LINK_PATTERN, strip_travel_metrics
 
 
 MATCH_FIELDS = ('date', 'weekday', 'description', 'collection_time', 'start_time', 'end_time', 'location')
@@ -20,7 +20,7 @@ def parse_schedule(content, match_ids=None):
     matches, settings, document = [], {}, []
     table_found = False
     columns = None
-    for line in content.splitlines():
+    for line in strip_travel_metrics(content).splitlines():
         line = line.strip()
         if not line or line in ('<!-- INFO_START -->', '<!-- INFO_END -->'):
             continue
@@ -41,7 +41,7 @@ def parse_schedule(content, match_ids=None):
                     raise ValueError('Unsupported schedule table')
                 table_found, columns = True, len(cells)
                 continue
-            if all(re.fullmatch(r':?-+:?', cell) for cell in cells):
+            if all(re.fullmatch(r':?-+:?', cell) for cell in cells[:7]):
                 continue
             if not table_found or len(cells) != columns:
                 raise ValueError('Invalid schedule row')

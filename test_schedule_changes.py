@@ -92,6 +92,28 @@ class ScheduleComparisonTests(unittest.TestCase):
                     parse_schedule(content)
         self.assertEqual(parse_schedule(schedule([]))['matches'], [])
 
+    def test_costs_and_map_urls_are_ignored_alone_and_with_a_time_change(self):
+        for language in ('nl', 'en'):
+            previous = schedule(language=language)
+            changed = previous.replace('EUR 4.20', 'EUR 9.99').replace('0.23', '0.50').replace(
+                'https://maps.example/one', 'https://maps.example/two')
+            with self.subTest(language=language):
+                self.assertEqual(compare_schedules(parse_schedule(previous), parse_schedule(changed)), [])
+                entries = compare_schedules(parse_schedule(previous), parse_schedule(
+                    changed.replace('10:00', '10:15')))
+                self.assertEqual(len(entries), 1)
+                self.assertEqual(entries[0]['field'], 'collection_time')
+
+    def test_legacy_route_metric_values_are_ignored_but_schema_migration_is_not(self):
+        previous = schedule().replace('Costs |', 'Costs | Kms | Minutes |').replace(
+            'EUR 4.20 |', 'EUR 4.20 | 18 | 23 |').replace(
+            '| --- | --- | --- | --- | --- | --- | --- | --- |',
+            '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
+        changed = previous.replace('18 | 23', '19 | 24')
+        self.assertEqual(compare_schedules(parse_schedule(previous), parse_schedule(changed)), [])
+        entries = compare_schedules(parse_schedule(previous), parse_schedule(schedule()))
+        self.assertEqual([(entry['kind'], entry['field']) for entry in entries], [('document', 'columns')])
+
 
 if __name__ == '__main__':
     unittest.main()
