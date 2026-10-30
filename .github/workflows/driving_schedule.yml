@@ -87,18 +87,8 @@ jobs:
       shell: bash
         
     - name: Convert to PDF
-      if: steps.check_changes.outputs.changes == 'true'
       run: |
-        python convert_driving_schedule_to_pdf.py
-
-    - name: Download previous schedule PDFs
-      uses: dawidd6/action-download-artifact@v3
-      continue-on-error: true
-      with:
-        name: driving-schedules-pdf
-        path: previous-pdfs/
-        workflow: driving_schedule.yml
-        if_no_artifact_found: ignore
+        python convert_driving_schedule_to_pdf.py --all
 
     - name: Build stable schedule pages
       run: python publish_schedule_pages.py
@@ -128,7 +118,6 @@ jobs:
         retention-days: 90
         
     - name: Upload PDF as artifact
-      if: steps.check_changes.outputs.changes == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: driving-schedules-pdf

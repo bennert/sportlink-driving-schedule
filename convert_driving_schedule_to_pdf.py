@@ -3,6 +3,7 @@ Script om markdown rijschema te converteren naar PDF
 """
 import os
 import re
+import sys
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -30,8 +31,9 @@ markdown_folder = os.path.join(script_dir, "docs")
 
 # Check for flag files that indicate which markdown files to convert
 flag_files = [file for file in os.listdir(markdown_folder) if file.endswith(".flag")]
+convert_all = '--all' in sys.argv
 
-if not flag_files:
+if not flag_files and not convert_all:
     print("No changes detected - no PDF conversion needed")
     exit(0)
 else:
@@ -40,14 +42,21 @@ else:
 
 # Collect all markdown files that need to be converted
 markdown_files_to_convert = []
-for flag_file in flag_files:
-    flag_path = os.path.join(markdown_folder, flag_file)
-    with open(flag_path, 'r', encoding='utf-8') as f:
-        files = [
-            line.strip() for line in f.readlines()[:-1]
-            if os.path.exists(os.path.join(script_dir, line.strip()))
-        ]
-        markdown_files_to_convert.extend(files)
+if convert_all:
+    markdown_files_to_convert = [
+        os.path.join(markdown_folder, filename)
+        for filename in sorted(os.listdir(markdown_folder))
+        if filename.startswith(('Rijschema_', 'Drivingschedule_')) and filename.endswith('.md')
+    ]
+else:
+    for flag_file in flag_files:
+        flag_path = os.path.join(markdown_folder, flag_file)
+        with open(flag_path, 'r', encoding='utf-8') as f:
+            files = [
+                line.strip() for line in f.readlines()[:-1]
+                if os.path.exists(os.path.join(script_dir, line.strip()))
+            ]
+            markdown_files_to_convert.extend(files)
 
 print(f"\nConverting {len(markdown_files_to_convert)} markdown file(s) to PDF...")
 

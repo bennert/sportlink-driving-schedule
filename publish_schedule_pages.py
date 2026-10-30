@@ -80,4 +80,4 @@ def publish_latest_schedules(source_directories, output_directory):
 
 
 if __name__ == '__main__':
-    publish_latest_schedules(('docs', 'previous-pdfs'), 'site')
+    publish_latest_schedules(('docs',), 'site')
