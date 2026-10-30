@@ -48,21 +48,23 @@ jobs:
         pip install reportlab markdown2
         
     - name: Download previous artifacts
-      uses: dawidd6/action-download-artifact@v3
+      uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477
       continue-on-error: true
       with:
         name: driving-schedules-md
         path: docs/
         workflow: driving_schedule.yml
+        workflow_conclusion: success
         if_no_artifact_found: ignore
 
     - name: Download previous Google Maps place ID cache
-      uses: dawidd6/action-download-artifact@v3
+      uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477
       continue-on-error: true
       with:
         name: google-maps-place-id-cache
         path: docs/
         workflow: driving_schedule.yml
+        workflow_conclusion: success
         if_no_artifact_found: ignore
         
     - name: Create driving schedule

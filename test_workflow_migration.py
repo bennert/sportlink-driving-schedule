@@ -70,6 +70,26 @@ class WorkflowMigrationTests(unittest.TestCase):
         self.assertEqual(uploads['google-maps-place-id-cache']['if'],
                          "steps.create_schedule.outcome == 'success'")
 
+    def test_both_downloads_keep_previous_successful_run_and_missing_artifact_contracts(self):
+        audit = json.loads(AUDIT.read_text(encoding='utf-8'))
+        action = next(item for item in audit['actions']
+                      if item['repository'] == 'dawidd6/action-download-artifact')
+        self.assertEqual(action['using'], 'node24')
+        self.assertRegex(action['ref'], r'^[0-9a-f]{40}$')
+        downloads = [step for step in workflow_steps().values()
+                     if step.get('uses', '').startswith('dawidd6/action-download-artifact@')]
+        self.assertEqual(len(downloads), 2)
+        self.assertEqual({step['with']['name'] for step in downloads},
+                         {'driving-schedules-md', 'google-maps-place-id-cache'})
+        for step in downloads:
+            self.assertEqual(step['uses'], f"{action['repository']}@{action['ref']}")
+            self.assertEqual(step['continue-on-error'], 'true')
+            self.assertEqual(step['with'], {
+                'name': step['with']['name'], 'path': 'docs/', 'workflow': 'driving_schedule.yml',
+                'workflow_conclusion': 'success', 'if_no_artifact_found': 'ignore',
+            })
+            self.assertTrue(set(step['with']).issubset(action['inputs']))
+
 
 if __name__ == '__main__':
     unittest.main()

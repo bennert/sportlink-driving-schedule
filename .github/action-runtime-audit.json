@@ -50,6 +50,16 @@
       "outputs": [],
       "release_notes": "https://github.com/actions/upload-artifact/releases/tag/v6.0.0",
       "compatibility": "Node24 declared by default, unlike v5. Requires runner >=2.327.1; existing artifact inputs remain supported."
+    },
+    {
+      "repository": "dawidd6/action-download-artifact",
+      "ref": "eab87c9830c39eff17e5a6eadb20bfb4bc880477",
+      "version": "v27",
+      "using": "node24",
+      "inputs": ["name", "path", "workflow", "workflow_conclusion", "if_no_artifact_found"],
+      "outputs": [],
+      "release_notes": "https://github.com/dawidd6/action-download-artifact/releases/tag/v27",
+      "compatibility": "Published Node24 release. Workflow selector, successful-run filtering, named artifact extraction and missing-artifact policy remain available. v27 fixes unfiltered run search. Live restore and token permission verification remain pending; existing permissions are unchanged."
     }
   ]
 }
