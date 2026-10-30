@@ -17,6 +17,10 @@ SETTING_LABELS = {
     'Warming Up Time:': 'warming_up_time', 'Warming Up Tijd:': 'warming_up_time',
 }
 COMPARISON_NOTICES = {
+    'legacy': {
+        'nl': 'Wijzigingsoverzicht niet beschikbaar',
+        'en': 'Change report unavailable',
+    },
     'missing': {
         'nl': 'Geen vorige versie beschikbaar; wijzigingen konden niet worden bepaald',
         'en': 'No previous version available; changes could not be determined',

@@ -10,6 +10,12 @@ def report_path(directory, team_id):
     return Path(directory) / f'schedule_changes_{team_id}.json'
 
 
+def verify_report_source(report, filename, content):
+    reference = version_reference(filename, content)
+    if report['sources'].get(reference['filename']) != reference['digest']:
+        raise ValueError(f"Change report error for {report['team_id']} ({reference['filename']}): incorrect version")
+
+
 def _primary(sources):
     return next((name for name in sources if name.startswith('Drivingschedule_')), next(iter(sources)))
 

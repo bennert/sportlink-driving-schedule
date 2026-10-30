@@ -9,6 +9,8 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from datetime import datetime
 from dotenv import load_dotenv
+from schedule_change_store import load_change_report, verify_report_source
+from schedule_change_text import bilingual_report
 
 load_dotenv()
 
@@ -49,7 +51,7 @@ def send_email(
     msg.attach(MIMEText(email_body, 'plain'))
 
     # Attach PDF files
-    for pdf_file in pdf_files:
+    for pdf_file in email_pdf_files:
         if os.path.exists(pdf_file):
             with open(pdf_file, 'rb') as file_email:
                 pdf_attachment = MIMEApplication(file_email.read(), _subtype='pdf')
@@ -94,6 +96,7 @@ print(f"\nFound {len(flag_files)} team(s) with changes")
 
 # Process each team
 EMAILS_SENT = 0
+REPORT_ERRORS = 0
 for flag_file in flag_files:
     flag_path = os.path.join(handbal_folder, flag_file)
     team_id = flag_file.replace('.convert_to_pdf_', '').replace('.flag', '')
@@ -114,6 +117,16 @@ for flag_file in flag_files:
     nl_file = lines[0]
     en_file = lines[1]
     team_email = lines[2] if len(lines) > 2 else ''
+    try:
+        report = load_change_report(handbal_folder, team_id, required=True)
+        for source_file in (nl_file, en_file):
+            with open(source_file, encoding='utf-8') as source:
+                verify_report_source(report, source_file, source.read())
+        change_text = bilingual_report(report)
+    except (ValueError, OSError) as error:
+        print(f'  Cannot send schedule update for {team_id}: {error}')
+        REPORT_ERRORS += 1
+        continue
 
     # Get corresponding PDF files
     pdf_nl = nl_file.replace('.md', '.pdf')
@@ -132,6 +145,8 @@ for flag_file in flag_files:
     # Prepare email
     SUBJECT = f"{email_subject_prefix} - {team_id} - {datetime.now().strftime('%Y-%m-%d')}"
     BODY = f"""New driving schedule generated for {team_id}!
+
+{change_text}
 
 See the attached PDF file(s).
 
@@ -153,5 +168,5 @@ print(f"\n{'='*50}")
 print(f"Email summary: {EMAILS_SENT} email(s) sent successfully")
 print(f"{'='*50}")
 
-if EMAILS_SENT == 0:
+if EMAILS_SENT == 0 or REPORT_ERRORS:
     sys.exit(1)
