@@ -1,6 +1,8 @@
 import unittest
 
-from schedule_changes import MATCH_FIELDS, compare_schedules, parse_schedule
+from schedule_changes import (
+    MATCH_FIELDS, build_change_report, compare_schedules, comparison_notice, parse_schedule,
+)
 
 
 def schedule(rows=None, language='en', base='Eindhoven', warming_up='0:45:00', extra=''):
@@ -113,6 +115,53 @@ class ScheduleComparisonTests(unittest.TestCase):
         self.assertEqual(compare_schedules(parse_schedule(previous), parse_schedule(changed)), [])
         entries = compare_schedules(parse_schedule(previous), parse_schedule(schedule()))
         self.assertEqual([(entry['kind'], entry['field']) for entry in entries], [('document', 'columns')])
+
+
+class ComparisonBaselineTests(unittest.TestCase):
+    def report(self, previous, current=None):
+        return build_change_report('EHV HS1', previous, current or schedule(),
+                                   'Drivingschedule_EHV HS1_2026-10-30.md',
+                                   'Drivingschedule_EHV HS1_2026-10-30.md')
+
+    def test_same_day_versions_have_distinct_digests_without_delivery_claims(self):
+        report = self.report(schedule(), schedule([match_row(collection_time='10:15')]))
+        self.assertEqual(report['comparison'], 'compared')
+        baseline = dict(report['baseline'] or {})
+        self.assertTrue(baseline)
+        self.assertEqual(baseline['filename'], report['current']['filename'])
+        self.assertNotEqual(baseline['digest'], report['current']['digest'])
+        for language in ('nl', 'en'):
+            notice = comparison_notice(report, language)
+            self.assertIn(baseline['filename'], notice)
+            self.assertIn(baseline['digest'], notice)
+            self.assertNotIn('delivered', notice)
+
+    def test_missing_and_unreadable_baselines_have_exact_bilingual_notices(self):
+        expected = {
+            'missing': (
+                'Geen vorige versie beschikbaar; wijzigingen konden niet worden bepaald',
+                'No previous version available; changes could not be determined'),
+            'unreadable': (
+                'Vorige versie onleesbaar; wijzigingen konden niet worden bepaald',
+                'Previous version unreadable; changes could not be determined'),
+        }
+        for previous, status in ((None, 'missing'), ('not a schedule', 'unreadable')):
+            with self.subTest(status=status):
+                report = self.report(previous)
+                self.assertEqual(report['comparison'], status)
+                self.assertEqual(report['entries'], [])
+                self.assertEqual(len(report['snapshot']['matches']), 1)
+                self.assertEqual(tuple(comparison_notice(report, lang) for lang in ('nl', 'en')),
+                                 expected[status])
+
+    def test_readable_legacy_baseline_does_not_require_identifier_metadata(self):
+        report = self.report(schedule(), schedule([match_row(collection_time='10:15')]))
+        self.assertEqual(report['comparison'], 'compared')
+        self.assertEqual(len(report['entries']), 1)
+
+    def test_invalid_current_schedule_is_not_presented_as_success(self):
+        with self.assertRaises(ValueError):
+            self.report(schedule(), 'unavailable calendar')
 
 
 if __name__ == '__main__':

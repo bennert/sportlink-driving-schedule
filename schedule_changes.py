@@ -1,5 +1,7 @@
 from collections import Counter
 from datetime import datetime
+import hashlib
+from pathlib import Path
 import re
 
 from schedule_content import LOCATION_LINK_PATTERN, strip_travel_metrics
@@ -14,6 +16,49 @@ SETTING_LABELS = {
     'Base location:': 'base_location', 'Basis locatie:': 'base_location',
     'Warming Up Time:': 'warming_up_time', 'Warming Up Tijd:': 'warming_up_time',
 }
+COMPARISON_NOTICES = {
+    'missing': {
+        'nl': 'Geen vorige versie beschikbaar; wijzigingen konden niet worden bepaald',
+        'en': 'No previous version available; changes could not be determined',
+    },
+    'unreadable': {
+        'nl': 'Vorige versie onleesbaar; wijzigingen konden niet worden bepaald',
+        'en': 'Previous version unreadable; changes could not be determined',
+    },
+}
+
+
+def version_reference(filename, content):
+    return {'filename': Path(filename).name,
+            'digest': hashlib.sha256(content.encode('utf-8')).hexdigest()}
+
+
+def build_change_report(team_id, previous_content, current_content, previous_name, current_name,
+                        previous_ids=None, current_ids=None):
+    current = parse_schedule(current_content, current_ids)
+    report = {
+        'schema_version': 1, 'team_id': team_id,
+        'current': version_reference(current_name, current_content),
+        'baseline': None, 'comparison': 'missing', 'entries': [], 'snapshot': current,
+    }
+    if previous_content is not None:
+        report['baseline'] = version_reference(previous_name, previous_content)
+        try:
+            previous = parse_schedule(previous_content, previous_ids)
+        except ValueError:
+            report['comparison'] = 'unreadable'
+        else:
+            report['comparison'] = 'compared'
+            report['entries'] = compare_schedules(previous, current)
+    return report
+
+
+def comparison_notice(report, language):
+    if report['comparison'] != 'compared':
+        return COMPARISON_NOTICES[report['comparison']][language]
+    baseline = report['baseline']
+    label = 'Vorige beschikbare versie' if language == 'nl' else 'Previous available version'
+    return f"{label}: {baseline['filename']} ({baseline['digest']})"
 
 
 def parse_schedule(content, match_ids=None):
