@@ -173,6 +173,31 @@ python -m unittest discover -v
 
 Tests use local fixtures and mocked external services. PDF tests generate both languages, extract text, render report pages, and check pagination and text bounds.
 
+### GitHub Actions Node.js 24 migration
+
+The schedule workflow pins reviewed action commits. The release versions, exact revisions, runtime declarations, used inputs, nested dependencies, and compatibility notes are recorded in [.github/action-runtime-audit.json](.github/action-runtime-audit.json). This includes both ordinary artifact uploads and the separate uploader inside the Pages composite.
+
+After installing the test dependencies, run the local checks from the repository root:
+
+```bash
+python -m unittest discover -v
+actionlint -shellcheck= -pyflakes= .github/workflows/driving_schedule.yml
+python audit_action_runtimes.py
+```
+
+The unit tests stay offline and require GNU tar for the Pages archive fixture. On Windows they use Git for Windows' bundled tar when available. The final command is an explicit, read-only network audit: it downloads action metadata at the pinned commits and checks runtimes, inputs, defaults, nested references, and the Linux Pages tar command. It does not execute downloaded actions, dispatch workflows, deploy Pages, or send messages. The actionlint invocation checks workflow syntax and inputs; optional ShellCheck and Pyflakes integrations are disabled in this environment.
+
+Local verification on 2026-10-30:
+
+- **Passed:** 68 unit tests, including workflow settings, artifact names/paths/retention, dependency-audit failures, and the Pages tar fixture. The fixture retains site-relative HTML/PDF paths, excludes hidden files, and converts hardlinks to ordinary archive entries.
+- **Passed:** actionlint 1.7.12, installed from its official release after verifying the published SHA-256 checksum.
+- **Passed:** read-only upstream metadata audit of eight pinned references: seven JavaScript actions declare Node.js 24 and one Pages composite depends only on the reviewed Node.js 24 uploader.
+- **Pending:** an approved test environment, controlled workflow run URL, cross-run restoration of Markdown/JSON/cache artifacts, empty-history behavior on GitHub, token permission verification, Pages deployment, stable PDF URL, and absence of the Node.js 20 warning in an actual run.
+
+The migration is locally implemented but is **not fully accepted** until the pending checks pass. No production workflow was dispatched for validation. A push to `main` or a manual dispatch can publish schedules and send team email; do not use that as an uncontrolled migration test.
+
+Before a live validation, explicitly approve a test repository or controlled environment with test notification destinations and a test Pages site. Run once without previous artifacts and again with previous artifacts, verify the restored JSON report matches its schedule version, verify the published team PDF and deployment URL, and record the run URLs and warning check here or in the migration PR. Keep production triggers and destinations unchanged. For private repositories the download action documents `actions: read` as necessary; existing permissions remain unchanged until documentation and a controlled restore test justify that minimal addition. Do not replace it with a personal access token or write permission.
+
 ### Adding Team Logos
 
 You can add team and/or club logos to each driving schedule:

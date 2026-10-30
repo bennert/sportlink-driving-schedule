@@ -1,14 +1,17 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import tarfile
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 import yaml
 
+from audit_action_runtimes import audit_workflow
 
 ROOT = Path(__file__).parent
 WORKFLOW = ROOT / '.github' / 'workflows' / 'driving_schedule.yml'
@@ -24,6 +27,60 @@ def workflow_steps():
 
 
 class WorkflowMigrationTests(unittest.TestCase):
+    def metadata_fixtures(self):
+        inventory = json.loads(AUDIT.read_text(encoding='utf-8'))
+        fixtures = {}
+        for action in inventory['actions']:
+            metadata = {'runs': {'using': action['using']},
+                        'inputs': {name: {} for name in action['inputs']},
+                        'outputs': {name: {} for name in action['outputs']}}
+            for name, value in action.get('defaults', {}).items():
+                metadata['inputs'].setdefault(name, {})['default'] = value
+            if action['using'] == 'composite':
+                arguments = [argument.replace('{site}', '$INPUT_PATH').replace('{archive}', '$RUNNER_TEMP/artifact.tar')
+                             for argument in action['linux_archive_arguments']]
+                metadata['runs']['steps'] = [
+                    {'if': "runner.os == 'Linux'", 'run': 'tar ' + shlex.join(arguments)},
+                    *({'uses': reference} for reference in action['dependencies']),
+                ]
+            fixtures[f"{action['repository']}@{action['ref']}"] = metadata
+        return fixtures
+
+    def test_dependency_audit_covers_every_reference_without_network_in_unit_tests(self):
+        fixtures = self.metadata_fixtures()
+        with patch('requests.get', side_effect=AssertionError('Unit tests must stay offline')):
+            results = audit_workflow(fetch_metadata=lambda reference: yaml.safe_dump(fixtures[reference]))
+        self.assertEqual(len(results), len(fixtures))
+        self.assertEqual({result['using'] for result in results}, {'node24', 'composite'})
+
+    def test_dependency_audit_rejects_old_runtime_missing_inputs_and_changed_transport(self):
+        for problem in ('runtime', 'inputs', 'archive'):
+            with self.subTest(problem=problem):
+                fixtures = self.metadata_fixtures()
+                if problem == 'archive':
+                    target = next(value for value in fixtures.values() if 'archive' in value['inputs'])
+                    target['inputs']['archive']['default'] = 'false'
+                else:
+                    target = next(value for key, value in fixtures.items() if key.startswith('actions/setup-python@'))
+                    if problem == 'runtime':
+                        target['runs']['using'] = 'node20'
+                    else:
+                        target['inputs'].pop('python-version')
+                with self.assertRaises(ValueError):
+                    audit_workflow(fetch_metadata=lambda reference, current=fixtures: yaml.safe_dump(current[reference]))
+
+    def test_dependency_audit_rejects_unreviewed_nested_action_and_changed_tar_command(self):
+        for problem in ('dependency', 'tar'):
+            with self.subTest(problem=problem):
+                fixtures = self.metadata_fixtures()
+                pages = next(value for value in fixtures.values() if value['runs']['using'] == 'composite')
+                if problem == 'dependency':
+                    pages['runs']['steps'].append({'uses': 'unreviewed/action@' + '0' * 40})
+                else:
+                    pages['runs']['steps'][0]['run'] = 'tar -cvf artifact.tar .'
+                with self.assertRaises(ValueError):
+                    audit_workflow(fetch_metadata=lambda reference, current=fixtures: yaml.safe_dump(current[reference]))
+
     def test_direct_actions_match_reviewed_node24_commits(self):
         audit = json.loads(AUDIT.read_text(encoding='utf-8'))
         reviewed = {(action['repository'], action['ref']): action for action in audit['actions']}
