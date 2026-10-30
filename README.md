@@ -1,4 +1,5 @@
 # sportlink-driving-schedule
+
 Sportlink Driving Schedule
 
 ## Why this project?
@@ -22,6 +23,7 @@ Save yourself (and your team) hours of work and prevent miscommunication about d
 
 1. Click the "Fork" button at the top right of this repository
 2. Clone your forked repository:
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/sportlink-driving-schedule.git
 cd sportlink-driving-schedule
@@ -76,6 +78,7 @@ This project requires the following environment variables:
 #### Setting up Secrets Locally
 
 Create a `.env` file in the root directory:
+
 ```bash
 MAPS_API_KEY=your_google_maps_api_key_here
 SPORTLINK_TOKEN_LIST=TEAM_ID:team_sportlink_calendar_token
@@ -110,16 +113,18 @@ If you're using GitHub Actions or want to store secrets securely:
 5. Click on **Variables** tab and add the following variables:
    - Name: `SPORTLINK_TEAM_LIST`, Value: your team configuration(s) including email per team
    - Name: `EMAIL_SUBJECT`, Value: your email subject (e.g., "Driving Schedule")
-   - Name: `EMAIL_FROM`, Value: sender name and email (e.g., "Scheduler \<your.email@gmail.com\>")
+   - Name: `EMAIL_FROM`, Value: sender name and email (e.g., `Scheduler <your.email@gmail.com>`)
 
 ### Create Virtual Environment
 
 1. Create a new virtual environment:
+
 ```bash
 python -m venv .venv
 ```
 
-2. Activate the virtual environment:
+1. Activate the virtual environment:
+
 ```bash
 # Windows (PowerShell)
 .venv\Scripts\Activate.ps1
@@ -131,7 +136,8 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-3. Install the dependencies:
+1. Install the dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -143,6 +149,7 @@ pip install -r requirements.txt
 GitHub Actions persists a cache mapping normalized Sportlink locations to Google Maps `place_id` values. It does not store Distance Matrix distances or durations. Those route values are requested again during each schedule run. The cache is stored as the `google-maps-place-id-cache` workflow artifact.
 
 ### Generate driving schedule
+
 ```bash
 python create_driving_schedule.py
 ```
@@ -158,6 +165,7 @@ Travel costs, kilometre rates, route metric values, and map URL changes do not t
 The latest report and source match identifiers are stored in per-team JSON files alongside the Markdown schedules and retained in the `driving-schedules-md` artifact. Restore those files together. Invalid reports or reports for another schedule version block update delivery rather than silently dropping the explanation. Legacy schedules without reports show an explicit unavailable-report notice.
 
 ### Convert driving schedule to PDF
+
 ```bash
 python convert_driving_schedule_to_pdf.py
 ```
@@ -203,6 +211,7 @@ Before a live validation, explicitly approve a test repository or controlled env
 You can add team and/or club logos to each driving schedule:
 
 1. **Create a logos folder** in the project root:
+
    ```bash
    mkdir logos
    ```
@@ -211,7 +220,7 @@ You can add team and/or club logos to each driving schedule:
    - Convert the team ID to lowercase
    - Replace spaces with underscores
    - Add `.team.png` or `.club.png` suffix
-   
+
    **Examples:**
    - Team "EHV DS1" team logo → `logos/ehv_ds1.team.png`
    - Team "EHV DS1" club logo → `logos/ehv_ds1.club.png`
