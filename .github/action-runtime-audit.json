@@ -60,6 +60,28 @@
       "outputs": [],
       "release_notes": "https://github.com/dawidd6/action-download-artifact/releases/tag/v27",
       "compatibility": "Published Node24 release. Workflow selector, successful-run filtering, named artifact extraction and missing-artifact policy remain available. v27 fixes unfiltered run search. Live restore and token permission verification remain pending; existing permissions are unchanged."
+    },
+    {
+      "repository": "actions/upload-pages-artifact",
+      "ref": "fc324d3547104276b827a68afc52ff2a11cc49c9",
+      "version": "v5.0.0",
+      "using": "composite",
+      "inputs": ["path", "name", "retention-days", "include-hidden-files"],
+      "outputs": [],
+      "dependencies": ["actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f"],
+      "linux_archive_arguments": ["--dereference", "--hard-dereference", "--directory", "{site}", "-cvf", "{archive}", "--exclude=.git", "--exclude=.github", "--exclude=.[^/]*", "."],
+      "release_notes": "https://github.com/actions/upload-pages-artifact/releases/tag/v5.0.0",
+      "compatibility": "Stable composite release pins the Node24 upload-artifact v7 commit. Linux tar contract retained; hidden files default to excluded. Keep github-pages name and one-day retention. Live deployment remains pending."
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "ref": "bbbca2ddaa5d8feaa63e36b76fdaad77386f024f",
+      "version": "v7.0.0",
+      "using": "node24",
+      "inputs": ["name", "path", "retention-days", "if-no-files-found"],
+      "outputs": ["artifact-id"],
+      "release_notes": "https://github.com/actions/upload-artifact/releases/tag/v7.0.0",
+      "compatibility": "Used only by the pinned Pages composite. New archive input defaults to true, preserving ZIP transport around artifact.tar; the composite does not override it."
     }
   ]
 }
