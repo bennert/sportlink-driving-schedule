@@ -1,0 +1,55 @@
+{
+  "reviewed_on": "2026-10-30",
+  "actions": [
+    {
+      "repository": "actions/checkout",
+      "ref": "fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+      "version": "v5.1.0",
+      "using": "node24",
+      "inputs": [],
+      "outputs": [],
+      "release_notes": "https://github.com/actions/checkout/releases/tag/v5.1.0",
+      "compatibility": "Node24 requires runner >=2.327.1. New fork-PR safeguards do not affect the existing push, schedule and dispatch triggers."
+    },
+    {
+      "repository": "actions/setup-python",
+      "ref": "ece7cb06caefa5fff74198d8649806c4678c61a1",
+      "version": "v6.3.0",
+      "using": "node24",
+      "inputs": ["python-version"],
+      "outputs": [],
+      "release_notes": "https://github.com/actions/setup-python/releases/tag/v6.3.0",
+      "compatibility": "Python 3.11 input retained. Cache and RHEL changes do not change this Ubuntu workflow, which does not enable setup-python caching."
+    },
+    {
+      "repository": "actions/configure-pages",
+      "ref": "45bfe0192ca1faeb007ade9deae92b16b8254a0d",
+      "version": "v6.0.0",
+      "using": "node24",
+      "inputs": [],
+      "outputs": [],
+      "release_notes": "https://github.com/actions/configure-pages/releases/tag/v6.0.0",
+      "compatibility": "Node24 migration; current default configuration and token inputs remain available."
+    },
+    {
+      "repository": "actions/deploy-pages",
+      "ref": "368f82528645a54fb793d4d04e342629a3f51346",
+      "version": "v5.0.1",
+      "using": "node24",
+      "inputs": [],
+      "outputs": ["page_url"],
+      "release_notes": "https://github.com/actions/deploy-pages/releases/tag/v5.0.1",
+      "compatibility": "Polling adds backoff and jitter; page_url output and default github-pages artifact remain supported on GitHub.com."
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "ref": "b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+      "version": "v6.0.0",
+      "using": "node24",
+      "inputs": ["name", "path", "retention-days"],
+      "outputs": [],
+      "release_notes": "https://github.com/actions/upload-artifact/releases/tag/v6.0.0",
+      "compatibility": "Node24 declared by default, unlike v5. Requires runner >=2.327.1; existing artifact inputs remain supported."
+    }
+  ]
+}

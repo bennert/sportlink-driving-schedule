@@ -21,13 +21,13 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
     - name: Configure GitHub Pages
-      uses: actions/configure-pages@v5
+      uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
       
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: '3.11'
 
@@ -100,10 +100,10 @@ jobs:
 
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
         
     - name: Upload markdown files as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
       with:
         name: driving-schedules-md
         path: |
@@ -113,14 +113,14 @@ jobs:
 
     - name: Upload Google Maps place ID cache
       if: steps.create_schedule.outcome == 'success'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
       with:
         name: google-maps-place-id-cache
         path: docs/google_maps_place_ids.json
         retention-days: 90
         
     - name: Upload PDF as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
       with:
         name: driving-schedules-pdf
         path: docs/*.pdf
