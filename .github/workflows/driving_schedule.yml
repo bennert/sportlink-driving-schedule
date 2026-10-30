@@ -106,7 +106,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: driving-schedules-md
-        path: docs/*.md
+        path: |
+          docs/*.md
+          docs/schedule_changes_*.json
         retention-days: 30
 
     - name: Upload Google Maps place ID cache

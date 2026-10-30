@@ -15,6 +15,7 @@ from google_maps_cache import (
     save_place_id_cache,
 )
 from schedule_content import strip_travel_metrics
+from schedule_change_store import update_change_report
 from telegram_schedule import AMSTERDAM, select_matches_in_next_seven_days
 
 load_dotenv()
@@ -57,30 +58,38 @@ def get_sportlink_calendar(sportlink_calendar_token):
     """ Get events from sportlink """
     url_sportlink = f'https://data.sportlink.com/ical-team?token={sportlink_calendar_token}'
     response = requests.get(url_sportlink, timeout=10)
+    response.raise_for_status()
     content = response.content.decode('utf-8')
     return icalendar.Calendar.from_ical(content)
 
 def get_events_from_calendar():
     """ Get events from calendar """
     events = []
+    identifiers = {}
     for event in calendar.walk('VEVENT'):
         summary = event.get('summary')
-        start = event.get('dtstart').dt.strftime('%H:%M')
-        end = event.get('dtend').dt.strftime('%H:%M')
+        event_start = event.get('dtstart').dt
+        event_end = event.get('dtend').dt
+        if event_start.tzinfo:
+            event_start = event_start.astimezone(AMSTERDAM)
+        if event_end.tzinfo:
+            event_end = event_end.astimezone(AMSTERDAM)
+        start = event_start.strftime('%H:%M')
+        end = event_end.strftime('%H:%M')
         location = event.get('location')
         url_map = get_google_maps_url(location)
         location_link = f'[{location}]({url_map})'
-        date = event.get('dtstart').dt.strftime('%Y-%m-%d')
-        weekday = event.get('dtstart').dt.strftime('%A')
+        date = event_start.strftime('%Y-%m-%d')
+        weekday = event_start.strftime('%A')
         if base_location in location:
-            collection_time = (event.get('dtstart').dt - timebefore).strftime('%H:%M')
+            collection_time = (event_start - timebefore).strftime('%H:%M')
             costs = '€ 0'
         else:
             distance, duration = get_google_maps_distance_and_duration(location)
 
             # calculate colletion time: start - timebefore - time to travel - 5 min
             collection_time = \
-                (event.get('dtstart').dt - timebefore \
+                (event_start - timebefore \
                 - timedelta(minutes=duration)).strftime('%H:%M')
             collection_time = collection_time[:-1] + '0'
             raw_cost = Decimal(str(distance)) * Decimal(str(travel_cost_per_km))
@@ -92,7 +101,8 @@ def get_events_from_calendar():
         singleevent = [
             date, weekday, summary, collection_time, start, end, location_link, costs]
         events.append(singleevent)
-    return events
+        identifiers[id(singleevent)] = str(event.get('uid', ''))
+    return events, identifiers
 
 def get_events_header(language):
     """ Get events header """
@@ -224,9 +234,10 @@ for sportlink_team in sportlink_team_list:
     # Presence time before game
     timebefore = timedelta(minutes=warming_up_time)
     calendar = get_sportlink_calendar(SPORTLINK_TOKEN)
-    calendar_events = get_events_from_calendar()
+    calendar_events, event_identifiers = get_events_from_calendar()
     # Sort events on date
     calendar_events.sort(key=lambda x: x[0])
+    current_match_ids = [event_identifiers[id(event)] for event in calendar_events]
     selected_matches = select_matches_in_next_seven_days(
         calendar_events, announcement_run_time
     )
@@ -280,13 +291,24 @@ for sportlink_team in sportlink_team_list:
         CONTENT_NL += '| ' + ' | '.join(calendar_event) + ' |\n'
 
     # Check if content changed by comparing with old files (if they exist)
-    old_content_nl = get_markdown_content(docs_dir, f'Rijschema_{team_id}')
-    old_content_en = get_markdown_content(docs_dir, f'Drivingschedule_{team_id}')
+    old_content_nl = get_markdown_content(docs_dir, f'Rijschema_{team_id}_')
+    old_content_en = get_markdown_content(docs_dir, f'Drivingschedule_{team_id}_')
     CHANGED_NL = has_content_changed(old_content_nl, CONTENT_NL)
     CHANGED_EN = has_content_changed(old_content_en, CONTENT_EN)
+    previous_sources = {}
+    for old_prefix, old_source_content in ((f'Rijschema_{team_id}_', old_content_nl),
+                                          (f'Drivingschedule_{team_id}_', old_content_en)):
+        old_path = find_old_file(docs_dir, old_prefix, '.md')
+        if old_path and old_source_content is not None:
+            previous_sources[os.path.basename(old_path)] = old_source_content
+    change_report, schedule_changed = update_change_report(
+        docs_dir, team_id, previous_sources,
+        {os.path.basename(FILE_PATH_NL): CONTENT_NL, os.path.basename(FILE_PATH_EN): CONTENT_EN},
+        current_match_ids,
+    )
 
     # Only create flag file if content changed (to trigger PDF conversion)
-    if CHANGED_NL or CHANGED_EN:
+    if schedule_changed:
         if CHANGED_NL:
             print('  Dutch content changed - will update file and trigger PDF conversion')
             print_content_diff(old_content_nl, CONTENT_NL, f'old_Rijschema_{team_id}', f'new_Rijschema_{team_id}')
