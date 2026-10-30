@@ -1,3 +1,5 @@
+"""Tests for delivering localized change reports by email and workflow."""
+
 from contextlib import chdir, redirect_stdout
 from io import StringIO
 import os
@@ -15,16 +17,21 @@ from test_schedule_changes import match_row, schedule
 
 
 class ChangeDeliveryTests(unittest.TestCase):
+    """Verify localized schedule changes are delivered correctly."""
+
     def report(self, directory, previous=True):
+        """Create and return a change report for the test fixtures."""
         old = sources(schedule(), '29') if previous else {}
         current = sources(schedule([match_row(collection_time='10:15')]))
         return update_change_report(directory, 'EHV HS1', old, current, ['id'])[0], current
 
     def test_bilingual_rendering_keeps_all_entries_and_localizes_dates(self):
+        """Keep every report entry and localize dates in both languages."""
         with TemporaryDirectory() as directory:
             report, _ = self.report(directory)
             entry = report['entries'][0]
-            report['entries'] = [dict(entry, description=f'Match {index:02d}') for index in range(60)]
+            report['entries'] = [dict(
+                entry, description=f'Match {index:02d}') for index in range(60)]
             for language in ('nl', 'en'):
                 lines = report_lines(report, language)
                 self.assertEqual(len([line for line in lines if line.startswith('- ')]), 60)
@@ -34,6 +41,7 @@ class ChangeDeliveryTests(unittest.TestCase):
                 self.assertNotIn('EUR', '\n'.join(lines))
 
     def test_missing_baseline_notice_is_bilingual_without_invented_entries(self):
+        """Show a bilingual missing-baseline notice without fabricated changes."""
         with TemporaryDirectory() as directory:
             report, _ = self.report(directory, previous=False)
             text = bilingual_report(report)
@@ -43,12 +51,15 @@ class ChangeDeliveryTests(unittest.TestCase):
             self.assertNotIn('Added:', text)
 
     def test_email_keeps_both_pdfs_and_puts_bilingual_report_before_attachments(self):
+        """Include both PDFs after the bilingual report in the email body."""
         self.run_email(invalid_report=False)
 
     def test_email_is_not_sent_with_invalid_report(self):
+        """Prevent email delivery when the stored change report is invalid."""
         self.run_email(invalid_report=True)
 
     def run_email(self, invalid_report):
+        """Run the email script with temporary schedule and report files."""
         script = Path(__file__).with_name('send_team_emails.py')
         with TemporaryDirectory() as directory, chdir(directory), redirect_stdout(StringIO()):
             docs = Path(directory) / 'docs'
@@ -74,7 +85,8 @@ class ChangeDeliveryTests(unittest.TestCase):
                     runpy.run_path(str(script), run_name='__main__')
                     message = smtp.return_value.send_message.call_args.args[0]
                     body = message.get_payload()[0].get_payload(decode=True).decode('utf-8')
-                    self.assertLess(body.index('Driving schedule changes'), body.index('See the attached'))
+                    self.assertLess(
+                        body.index('Driving schedule changes'), body.index('See the attached'))
                     self.assertIn('Wijzigingen in het rijschema', body)
                     self.assertEqual(body.count('10:00'), 2)
                     self.assertEqual(body.count('10:15'), 2)

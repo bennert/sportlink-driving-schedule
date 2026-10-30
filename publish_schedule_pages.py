@@ -1,3 +1,5 @@
+"""Publish stable links to the latest team schedule PDFs."""
+
 import hashlib
 import html
 import re
@@ -10,12 +12,14 @@ SCHEDULE_PDF_PATTERN = re.compile(r'^Rijschema_(.+)_(\d{4}-\d{2}-\d{2})\.pdf$')
 
 
 def team_slug(team_id):
+    """Create a stable filesystem-safe slug for a team identifier."""
     readable_slug = re.sub(r'[^a-z0-9]+', '-', team_id.casefold()).strip('-') or 'team'
     stable_suffix = hashlib.sha256(team_id.encode('utf-8')).hexdigest()[:8]
     return f'{readable_slug}-{stable_suffix}'
 
 
 def publish_latest_schedules(source_directories, output_directory):
+    """Publish links to the newest available schedule PDF for each team."""
     latest_by_team = {}
     for source_directory in source_directories:
         for pdf_path in sorted(Path(source_directory).glob('Rijschema_*.pdf')):

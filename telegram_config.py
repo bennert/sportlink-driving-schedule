@@ -1,4 +1,7 @@
+"""Parse Telegram destinations and look up chat IDs for teams."""
+
 def parse_telegram_chat_list(value):
+    """Parse and validate the configured team-to-chat ID mapping."""
     destinations = {}
     entries = (entry.strip() for entry in (value or '').split(','))
     for entry in filter(None, entries):
@@ -18,6 +21,7 @@ def parse_telegram_chat_list(value):
 
 
 def get_team_chat_ids(destinations, team_id):
+    """Return configured Telegram chat IDs for a team or raise an error."""
     try:
         return destinations[team_id]
     except KeyError as error:

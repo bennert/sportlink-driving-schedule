@@ -1,3 +1,5 @@
+"""Render schedule change reports and workflow summaries as localized text."""
+
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -19,6 +21,7 @@ FIELD_LABELS = {
 
 
 def _value(field, value, language):
+    """Format a change value with localized labels and empty-value text."""
     if not value:
         return 'Niet ingesteld' if language == 'nl' else 'Not set'
     if field == 'date':
@@ -32,6 +35,7 @@ def _value(field, value, language):
 
 
 def entry_text(entry, language):
+    """Render one schedule change entry in the selected language."""
     language_index = 0 if language == 'nl' else 1
     kind = entry['kind']
     if kind in ('added', 'removed'):
@@ -50,7 +54,8 @@ def entry_text(entry, language):
     if kind == 'modified':
         prefix = f"{_value('date', entry['date'], language)} | {entry['description']} | "
     elif kind == 'document':
-        prefix = 'Documentinformatie gewijzigd | ' if language == 'nl' else 'Document information changed | '
+        prefix = 'Documentinformatie gewijzigd | ' \
+            if language == 'nl' else 'Document information changed | '
     else:
         prefix = ''
     connector = 'naar' if language == 'nl' else 'to'
@@ -58,6 +63,7 @@ def entry_text(entry, language):
 
 
 def report_lines(report, language):
+    """Render all report entries and notices as localized text lines."""
     current = report['current']
     label = 'Huidige versie' if language == 'nl' else 'Current version'
     lines = [f"{HEADINGS[language]} - {report['team_id']}",
@@ -70,10 +76,12 @@ def report_lines(report, language):
 
 
 def bilingual_report(report):
+    """Render a change report in Dutch and English."""
     return '\n'.join(report_lines(report, 'nl')) + '\n\n' + '\n'.join(report_lines(report, 'en'))
 
 
 def append_workflow_summary(report, changed, summary_path):
+    """Append a team's change status and entries to the workflow summary."""
     if not summary_path:
         return
     text = bilingual_report(report) if changed else 'Geen schemawijzigingen\nNo schedule changes'

@@ -1,3 +1,5 @@
+"""Tests for schedule parsing, comparison, and change report generation."""
+
 import unittest
 
 from schedule_changes import (
@@ -6,6 +8,7 @@ from schedule_changes import (
 
 
 def schedule(rows=None, language='en', base='Eindhoven', warming_up='0:45:00', extra=''):
+    """Build schedule text with configurable rows, language, and settings."""
     labels = ('Base location', 'Warming Up Time', 'Cost per km') if language == 'en' else (
         'Basis locatie', 'Warming Up Tijd', 'Kosten per km')
     header = 'Date | Day | Summary | Collection | Start | End | Location | Costs'
@@ -19,8 +22,9 @@ def schedule(rows=None, language='en', base='Eindhoven', warming_up='0:45:00', e
     return content
 
 
-def match_row(**changes):
-    values = dict(zip(MATCH_FIELDS, (
+def match_row(**changes: str):
+    """Build a match row with optional field overrides."""
+    values: dict[str, str] = dict(zip(MATCH_FIELDS, (
         '2026-11-01', 'Sunday', 'EHV HS1 - Team A', '10:00', '11:00', '13:00',
         '[Hall A](https://maps.example/one)',
     )))
@@ -29,7 +33,10 @@ def match_row(**changes):
 
 
 class ScheduleComparisonTests(unittest.TestCase):
+    """Verify matching and reporting behavior for changed schedules."""
+
     def test_all_match_fields_show_old_and_new_values_with_unique_uid(self):
+        """Report old and new values for every changed match field."""
         replacements = ('2026-11-08', 'Monday', 'Team B', '10:15', '11:30', '13:30', 'Hall B')
         previous = parse_schedule(schedule(), ['source-1'])
         for field, value in zip(MATCH_FIELDS, replacements):
@@ -42,11 +49,13 @@ class ScheduleComparisonTests(unittest.TestCase):
                 self.assertEqual(entries[0]['new'], value)
 
     def test_unique_legacy_row_matches_without_source_id(self):
+        """Match a unique legacy row that has no source identifier."""
         entries = compare_schedules(parse_schedule(schedule()), parse_schedule(
             schedule([match_row(collection_time='10:15')]), ['newly-available-id']))
         self.assertEqual([entry['kind'] for entry in entries], ['modified'])
 
     def test_date_or_description_change_without_identifier_is_remove_and_add(self):
+        """Treat changed legacy identity fields as a removal and an addition."""
         for changes in ({'date': '2026-11-08'}, {'description': 'Other match'}):
             with self.subTest(changes=changes):
                 entries = compare_schedules(parse_schedule(schedule()), parse_schedule(
@@ -54,11 +63,13 @@ class ScheduleComparisonTests(unittest.TestCase):
                 self.assertCountEqual([entry['kind'] for entry in entries], ['removed', 'added'])
 
     def test_different_source_ids_are_not_matched_by_description(self):
+        """Do not match rows with different source IDs by description alone."""
         entries = compare_schedules(parse_schedule(schedule(), ['old']),
                                     parse_schedule(schedule(), ['new']))
         self.assertCountEqual([entry['kind'] for entry in entries], ['removed', 'added'])
 
     def test_additions_and_removals_leave_unchanged_matches_out(self):
+        """Report only added and removed rows when other matches are unchanged."""
         old = schedule([match_row(), match_row(date='2026-11-08', description='B')])
         new = schedule([match_row(), match_row(date='2026-11-15', description='C')])
         entries = compare_schedules(parse_schedule(old), parse_schedule(new))
@@ -66,6 +77,7 @@ class ScheduleComparisonTests(unittest.TestCase):
                          [('removed', 'B'), ('added', 'C')])
 
     def test_ambiguous_duplicates_preserve_counts(self):
+        """Preserve duplicate row counts when identities are ambiguous."""
         old = schedule([match_row(), match_row(start_time='15:00')])
         new = schedule([match_row(start_time='11:30'), match_row(start_time='15:30')])
         entries = compare_schedules(parse_schedule(old), parse_schedule(new))
@@ -73,9 +85,10 @@ class ScheduleComparisonTests(unittest.TestCase):
         self.assertEqual(compare_schedules(parse_schedule(old), parse_schedule(old)), [])
 
     def test_settings_logos_and_document_changes_are_not_match_changes(self):
+        """Report document and setting changes separately from match changes."""
         old = parse_schedule(schedule(extra='<!-- CLUB_LOGO: logos/old.png -->\n'))
         new = parse_schedule(schedule(base='Veldhoven', warming_up='1:00:00',
-                                      extra='<!-- CLUB_LOGO: logos/new.png -->\nOther information\n'))
+            extra='<!-- CLUB_LOGO: logos/new.png -->\nOther information\n'))
         entries = compare_schedules(old, new)
         self.assertEqual(len(entries), 4)
         self.assertEqual({entry['kind'] for entry in entries}, {'setting', 'document'})
@@ -83,11 +96,13 @@ class ScheduleComparisonTests(unittest.TestCase):
         self.assertEqual((logo['old'], logo['new']), ('logos/old.png', 'logos/new.png'))
 
     def test_dutch_and_english_rows_have_the_same_meaning(self):
+        """Compare equivalent Dutch and English schedule rows consistently."""
         english = parse_schedule(schedule())
         dutch = parse_schedule(schedule([match_row(weekday='Zondag')], language='nl'))
         self.assertEqual(compare_schedules(english, dutch), [])
 
     def test_invalid_baselines_are_not_empty_schedules(self):
+        """Mark invalid baselines unavailable instead of treating them as empty."""
         for content in ('', 'Not a schedule', schedule().replace('2026-11-01', 'not-a-date')):
             with self.subTest(content=content):
                 with self.assertRaises(ValueError):
@@ -95,18 +110,21 @@ class ScheduleComparisonTests(unittest.TestCase):
         self.assertEqual(parse_schedule(schedule([]))['matches'], [])
 
     def test_costs_and_map_urls_are_ignored_alone_and_with_a_time_change(self):
+        """Ignore cost and map URL changes while preserving time changes."""
         for language in ('nl', 'en'):
             previous = schedule(language=language)
             changed = previous.replace('EUR 4.20', 'EUR 9.99').replace('0.23', '0.50').replace(
                 'https://maps.example/one', 'https://maps.example/two')
             with self.subTest(language=language):
-                self.assertEqual(compare_schedules(parse_schedule(previous), parse_schedule(changed)), [])
+                self.assertEqual(
+                    compare_schedules(parse_schedule(previous), parse_schedule(changed)), [])
                 entries = compare_schedules(parse_schedule(previous), parse_schedule(
                     changed.replace('10:00', '10:15')))
                 self.assertEqual(len(entries), 1)
                 self.assertEqual(entries[0]['field'], 'collection_time')
 
     def test_legacy_route_metric_values_are_ignored_but_schema_migration_is_not(self):
+        """Ignore legacy route metrics but detect schedule schema migrations."""
         previous = schedule().replace('Costs |', 'Costs | Kms | Minutes |').replace(
             'EUR 4.20 |', 'EUR 4.20 | 18 | 23 |').replace(
             '| --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -114,16 +132,21 @@ class ScheduleComparisonTests(unittest.TestCase):
         changed = previous.replace('18 | 23', '19 | 24')
         self.assertEqual(compare_schedules(parse_schedule(previous), parse_schedule(changed)), [])
         entries = compare_schedules(parse_schedule(previous), parse_schedule(schedule()))
-        self.assertEqual([(entry['kind'], entry['field']) for entry in entries], [('document', 'columns')])
+        self.assertEqual(
+            [(entry['kind'], entry['field']) for entry in entries], [('document', 'columns')])
 
 
 class ComparisonBaselineTests(unittest.TestCase):
+    """Verify baseline status and version identity in change reports."""
+
     def report(self, previous, current=None):
+        """Build a report fixture with optional previous schedule content."""
         return build_change_report('EHV HS1', previous, current or schedule(),
                                    'Drivingschedule_EHV HS1_2026-10-30.md',
                                    'Drivingschedule_EHV HS1_2026-10-30.md')
 
     def test_same_day_versions_have_distinct_digests_without_delivery_claims(self):
+        """Give same-day versions distinct digests without claiming delivery."""
         report = self.report(schedule(), schedule([match_row(collection_time='10:15')]))
         self.assertEqual(report['comparison'], 'compared')
         baseline = dict(report['baseline'] or {})
@@ -137,6 +160,7 @@ class ComparisonBaselineTests(unittest.TestCase):
             self.assertNotIn('delivered', notice)
 
     def test_missing_and_unreadable_baselines_have_exact_bilingual_notices(self):
+        """Use exact bilingual notices for missing and unreadable baselines."""
         expected = {
             'missing': (
                 'Geen vorige versie beschikbaar; wijzigingen konden niet worden bepaald',
@@ -155,11 +179,13 @@ class ComparisonBaselineTests(unittest.TestCase):
                                  expected[status])
 
     def test_readable_legacy_baseline_does_not_require_identifier_metadata(self):
+        """Accept readable legacy baselines without source identifier metadata."""
         report = self.report(schedule(), schedule([match_row(collection_time='10:15')]))
         self.assertEqual(report['comparison'], 'compared')
         self.assertEqual(len(report['entries']), 1)
 
     def test_invalid_current_schedule_is_not_presented_as_success(self):
+        """Do not report an invalid current schedule as a successful comparison."""
         with self.assertRaises(ValueError):
             self.report(schedule(), 'unavailable calendar')
 

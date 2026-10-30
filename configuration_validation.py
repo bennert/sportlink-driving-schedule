@@ -1,3 +1,5 @@
+"""Validate environment-based team, email, and Telegram configuration."""
+
 import math
 import os
 import sys
@@ -10,6 +12,7 @@ TOKEN_CONFIGURATION_FORMAT = 'TEAM_ID:TOKEN'
 
 
 def validate_configuration(environment, require_email=False, require_telegram=False):
+    """Return validation errors for required settings and configured teams."""
     errors = []
     required_names = ('MAPS_API_KEY', 'SPORTLINK_TOKEN_LIST', 'SPORTLINK_TEAM_LIST')
     for name in required_names:
@@ -106,6 +109,7 @@ def validate_configuration(environment, require_email=False, require_telegram=Fa
 
 
 def main():
+    """Validate configuration loaded from the process environment."""
     errors = validate_configuration(
         os.environ,
         require_telegram=os.environ.get('GITHUB_EVENT_NAME') == 'schedule',

@@ -1,3 +1,5 @@
+"""Validate and persist schedule change reports and their source versions."""
+
 import json
 from pathlib import Path
 import re
@@ -7,20 +9,27 @@ from schedule_content import strip_travel_metrics
 
 
 def report_path(directory, team_id):
+    """Return the JSON report path for a team."""
     return Path(directory) / f'schedule_changes_{team_id}.json'
 
 
 def verify_report_source(report, filename, content):
+    """Raise an error if report metadata does not match a source version."""
     reference = version_reference(filename, content)
     if report['sources'].get(reference['filename']) != reference['digest']:
-        raise ValueError(f"Change report error for {report['team_id']} ({reference['filename']}): incorrect version")
+        raise ValueError(
+            f"Change report error for {report['team_id']}" \
+            f" ({reference['filename']}): incorrect version")
 
 
 def _primary(sources):
-    return next((name for name in sources if name.startswith('Drivingschedule_')), next(iter(sources)))
+    """Choose the preferred schedule source from a source collection."""
+    return next(
+        (name for name in sources if name.startswith('Drivingschedule_')), next(iter(sources)))
 
 
 def _valid_reference(reference):
+    """Return whether a version reference has the expected fields and values."""
     return (isinstance(reference, dict) and isinstance(reference.get('filename'), str)
             and Path(reference['filename']).name == reference['filename']
             and isinstance(reference.get('digest'), str)
@@ -28,13 +37,17 @@ def _valid_reference(reference):
 
 
 def _validate_report(report, team_id, sources):
+    """Validate a stored report and its references to schedule sources."""
     if report['schema_version'] != 1 or report['team_id'] != team_id:
         raise ValueError('Unsupported schema or incorrect team')
     if report['comparison'] not in ('compared', 'missing', 'unreadable', 'legacy'):
         raise ValueError('Unknown comparison status')
     if not _valid_reference(report['current']):
         raise ValueError('Invalid current version')
-    if report['comparison'] in ('compared', 'unreadable') and not _valid_reference(report['baseline']):
+    if (
+        report['comparison'] in ('compared', 'unreadable') \
+            and not _valid_reference(report['baseline'])
+    ):
         raise ValueError('Invalid baseline version')
     if report['comparison'] in ('missing', 'legacy') and report['baseline'] is not None:
         raise ValueError('Unexpected baseline version')
@@ -43,13 +56,17 @@ def _validate_report(report, team_id, sources):
     for name, content in sources.items():
         if not name.startswith((f'Drivingschedule_{team_id}_', f'Rijschema_{team_id}_')):
             raise ValueError('Incorrect source team')
-        if Path(name).name != name or report['sources'][name] != version_reference(name, content)['digest']:
+        if (
+            Path(name).name != name or \
+            report['sources'][name] != version_reference(name, content)['digest']
+        ):
             raise ValueError(f'Incorrect source version: {name}')
     current_name = report['current']['filename']
     if report['sources'].get(current_name) != report['current']['digest']:
         raise ValueError('Incorrect current version digest')
     identifiers = [match.get('uid') for match in report['snapshot']['matches']]
-    if any(identifier is not None and not isinstance(identifier, str) for identifier in identifiers):
+    if any(
+        identifier is not None and not isinstance(identifier, str) for identifier in identifiers):
         raise ValueError('Invalid source match identifier')
     if parse_schedule(sources[current_name], identifiers) != report['snapshot']:
         raise ValueError('Snapshot does not match the current version')
@@ -71,6 +88,7 @@ def _validate_report(report, team_id, sources):
 
 
 def load_change_report(directory, team_id, sources=None, required=False):
+    """Load and validate a team's change report, if one is available."""
     path = report_path(directory, team_id)
     if not path.exists() and not required:
         return None
@@ -88,10 +106,13 @@ def load_change_report(directory, team_id, sources=None, required=False):
 
 
 def update_change_report(directory, team_id, previous_sources, current_sources, current_ids):
-    retained = load_change_report(directory, team_id, previous_sources) if previous_sources else None
+    """Compare source versions and persist the resulting change report."""
+    retained = load_change_report(
+        directory, team_id, previous_sources) if previous_sources else None
     old_by_language = {name.split('_', 1)[0]: content for name, content in previous_sources.items()}
     changed = any(strip_travel_metrics(content) != strip_travel_metrics(
-        old_by_language.get(name.split('_', 1)[0], '')) for name, content in current_sources.items())
+        old_by_language.get(
+            name.split('_', 1)[0], '')) for name, content in current_sources.items())
     if not changed and retained:
         return retained, False
     selected_sources = current_sources if changed else previous_sources

@@ -1,3 +1,5 @@
+"""Select schedule matches that fall within the next seven days."""
+
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -6,6 +8,7 @@ AMSTERDAM = ZoneInfo('Europe/Amsterdam')
 
 
 def select_matches_in_next_seven_days(matches, now=None):
+    """Select matches starting now and before the seven-day deadline."""
     now = now or datetime.now(AMSTERDAM)
     now = now.replace(tzinfo=AMSTERDAM) if now.tzinfo is None else now.astimezone(AMSTERDAM)
     deadline = now + timedelta(days=7)

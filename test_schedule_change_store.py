@@ -1,3 +1,5 @@
+"""Tests for persisting and validating schedule change reports."""
+
 from contextlib import chdir, redirect_stdout
 from io import StringIO
 import json
@@ -14,12 +16,16 @@ from test_schedule_changes import match_row, schedule
 
 
 def sources(content, day='30'):
+    """Build matching Dutch and English schedule source fixtures."""
     return {f'Drivingschedule_EHV HS1_2026-10-{day}.md': content,
             f'Rijschema_EHV HS1_2026-10-{day}.md': content.replace('Sunday', 'Zondag')}
 
 
 class ChangeStoreTests(unittest.TestCase):
+    """Verify change reports retain valid sources and reject invalid data."""
+
     def test_generator_preserves_source_uids_and_does_not_notify_on_unchanged_run(self):
+        """Preserve source IDs and avoid notification when content is unchanged."""
         script = Path(__file__).with_name('create_driving_schedule.py')
         calendar = (
             'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\nBEGIN:VEVENT\r\n'
@@ -40,7 +46,8 @@ class ChangeStoreTests(unittest.TestCase):
             self.assertEqual(first['comparison'], 'missing')
             self.assertEqual(first['snapshot']['matches'][0]['uid'], 'stable-match')
             self.assertEqual(first['snapshot']['matches'][0]['start_time'], '11:00')
-            self.assertIn('No previous version available;', summary_path.read_text(encoding='utf-8'))
+            self.assertIn(
+                'No previous version available;', summary_path.read_text(encoding='utf-8'))
             request.return_value.content = calendar.format(start='11', end='13').encode()
             runpy.run_path(str(script), run_name='__main__')
             updated = load_change_report('docs', 'EHV HS1', required=True)
@@ -59,9 +66,11 @@ class ChangeStoreTests(unittest.TestCase):
             self.assertNotIn('Collection time:', summary)
 
     def test_artifact_round_trip_without_previous_files_retains_uids_and_baseline(self):
+        """Retain match IDs and baseline data across an artifact round trip."""
         with TemporaryDirectory() as directory:
             first_sources = sources(schedule(), '29')
-            first, changed = update_change_report(directory, 'EHV HS1', {}, first_sources, ['stable-id'])
+            first, changed = update_change_report(
+                directory, 'EHV HS1', {}, first_sources, ['stable-id'])
             self.assertTrue(changed)
             current_sources = sources(schedule([match_row(collection_time='10:15')]))
             report, changed = update_change_report(
@@ -77,18 +86,22 @@ class ChangeStoreTests(unittest.TestCase):
             self.assertEqual(restored['snapshot']['matches'][0]['uid'], 'stable-id')
 
     def test_unchanged_run_preserves_report_and_does_not_request_email(self):
+        """Keep the existing report and skip email when schedules are unchanged."""
         with TemporaryDirectory() as directory:
             previous = sources(schedule(), '29')
             current = sources(schedule([match_row(collection_time='10:15')]))
             report, _ = update_change_report(directory, 'EHV HS1', previous, current, ['id'])
             raw = report_path(directory, 'EHV HS1').read_bytes()
-            ignored_change = sources(schedule([match_row(collection_time='10:15')]).replace('0.23', '0.50'), '31')
-            retained, changed = update_change_report(directory, 'EHV HS1', current, ignored_change, ['id'])
+            ignored_change = sources(
+                schedule([match_row(collection_time='10:15')]).replace('0.23', '0.50'), '31')
+            retained, changed = update_change_report(
+                directory, 'EHV HS1', current, ignored_change, ['id'])
             self.assertFalse(changed)
             self.assertEqual(retained, report)
             self.assertEqual(report_path(directory, 'EHV HS1').read_bytes(), raw)
 
     def test_missing_legacy_sidecar_does_not_invent_historical_changes(self):
+        """Avoid inventing historical changes when a legacy sidecar is absent."""
         with TemporaryDirectory() as directory:
             current = sources(schedule())
             report, changed = update_change_report(directory, 'EHV HS1', current, current, ['id'])
@@ -97,6 +110,7 @@ class ChangeStoreTests(unittest.TestCase):
             self.assertEqual(report['entries'], [])
 
     def test_rejects_missing_invalid_and_wrong_version_reports(self):
+        """Reject absent, malformed, and unsupported change reports."""
         with TemporaryDirectory() as directory:
             current = sources(schedule())
             path = report_path(directory, 'EHV HS1')

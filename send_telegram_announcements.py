@@ -1,3 +1,5 @@
+"""Format and deliver scheduled match announcements through Telegram."""
+
 import json
 import os
 import re
@@ -23,6 +25,7 @@ DUTCH_MONTHS = (
 
 
 def format_match_date(date_value):
+    """Format an ISO date using Dutch weekday and month names."""
     match_date = date.fromisoformat(date_value)
     return (
         f'{DUTCH_WEEKDAYS[match_date.weekday()]} {match_date.day} '
@@ -31,6 +34,7 @@ def format_match_date(date_value):
 
 
 def format_announcement(team_id, matches):
+    """Format a team's upcoming matches as a Telegram message."""
     heading = f'Wedstrijden {team_id} (komende 7 dagen):'
     if not matches:
         return f'{heading}\n\nGeen wedstrijden gepland.'
@@ -53,10 +57,16 @@ def format_announcement(team_id, matches):
 
 
 def _markdown_cell(value):
-    return str(value).replace('\\', '\\\\').replace('|', '\\|').replace('\r', ' ').replace('\n', ' ')
+    """Escape Markdown characters and line breaks in a table cell."""
+    return str(value) \
+        .replace('\\', '\\\\') \
+        .replace('|', '\\|') \
+        .replace('\r', ' ') \
+        .replace('\n', ' ')
 
 
 def format_delivery_summary(results):
+    """Format per-destination Telegram delivery results as a Markdown table."""
     lines = [
         '## Telegram delivery results',
         '',
@@ -75,6 +85,7 @@ def format_delivery_summary(results):
 
 
 def send_telegram_message(bot_token, chat_id, text):
+    """Send a message to a Telegram chat or raise on delivery failure."""
     url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     try:
         response = requests.post(url, json={'chat_id': chat_id, 'text': text}, timeout=10)
@@ -90,11 +101,13 @@ def send_telegram_message(bot_token, chat_id, text):
         detail = f': {description}' if description else ''
         raise RuntimeError(f'Telegram Bot API returned HTTP {response.status_code}{detail}')
     if not isinstance(result, dict) or not result.get('ok'):
-        description = result.get('description', 'unknown error') if isinstance(result, dict) else 'unknown response'
+        description = result.get(
+            'description', 'unknown error') if isinstance(result, dict) else 'unknown response'
         raise RuntimeError(f'Telegram Bot API rejected the message: {description}')
 
 
 def main():
+    """Load announcements, deliver them, and report delivery outcomes."""
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
     if not bot_token:
         print('ERROR: TELEGRAM_BOT_TOKEN not set')

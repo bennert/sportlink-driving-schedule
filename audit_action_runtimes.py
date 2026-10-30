@@ -1,3 +1,5 @@
+"""Audit GitHub Actions references against the reviewed runtime inventory."""
+
 import hashlib
 import json
 from pathlib import Path
@@ -14,6 +16,7 @@ INVENTORY = ROOT / '.github' / 'action-runtime-audit.json'
 
 
 def fetch_action_metadata(reference):
+    """Fetch metadata for a pinned GitHub Action reference."""
     match = re.fullmatch(r'([\w.-]+/[\w.-]+)@([0-9a-f]{40})', reference)
     if not match:
         raise ValueError(f'Action must use a reviewed immutable commit: {reference}')
@@ -25,6 +28,7 @@ def fetch_action_metadata(reference):
 
 
 def _check_archive_contract(action, metadata):
+    """Check that an action's archive command matches its reviewed contract."""
     linux = next(step for step in metadata['runs']['steps']
                  if step.get('if') == "runner.os == 'Linux'")
     expression = "${{ inputs.include-hidden-files != 'true' && '--exclude=.[^/]*' || '' }}"
@@ -37,6 +41,7 @@ def _check_archive_contract(action, metadata):
 
 
 def audit_workflow(workflow_path=WORKFLOW, inventory_path=INVENTORY, fetch_metadata=None):
+    """Validate workflow action references against the runtime inventory."""
     fetch_metadata = fetch_metadata or fetch_action_metadata
     workflow = yaml.load(Path(workflow_path).read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
     inventory = json.loads(Path(inventory_path).read_text(encoding='utf-8'))
@@ -86,6 +91,7 @@ def audit_workflow(workflow_path=WORKFLOW, inventory_path=INVENTORY, fetch_metad
 
 
 def main():
+    """Run the workflow runtime audit and report its result."""
     try:
         results = audit_workflow()
     except (ValueError, KeyError, TypeError, StopIteration, OSError, requests.RequestException) as error:

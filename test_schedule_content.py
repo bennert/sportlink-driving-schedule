@@ -1,10 +1,15 @@
+"""Tests for schedule content normalization and migration behavior."""
+
 import unittest
 
 from schedule_content import strip_travel_metrics
 
 
 class ScheduleContentTests(unittest.TestCase):
+    """Verify normalization removes travel metrics but preserves changes."""
+
     def test_old_schema_ignores_costs_and_route_columns_for_migration(self):
+        """Ignore legacy costs and route columns during migration."""
         old_content = (
             '| Date | Day | Summary | Collection | Start | End | Location | Costs | Kms | Minutes |\n'
             '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
@@ -27,6 +32,7 @@ class ScheduleContentTests(unittest.TestCase):
         self.assertNotEqual(normalized, strip_travel_metrics(new_content))
 
     def test_new_schema_ignores_cost_and_place_url_changes(self):
+        """Ignore cost and place URL changes in the current schema."""
         first = (
             '| 2026-11-01 | Sunday | Match | 10:00 | 11:00 | 13:00 | '
             '[Sports Hall](https://maps.example/one) | € 4.20 |\n'
@@ -38,6 +44,7 @@ class ScheduleContentTests(unittest.TestCase):
         self.assertEqual(strip_travel_metrics(first), strip_travel_metrics(changed_cost))
 
     def test_ignores_cost_per_km_changes_in_both_languages(self):
+        """Ignore cost-per-kilometer changes in Dutch and English schedules."""
         for label in ('Cost per km:', 'Kosten per km:'):
             with self.subTest(label=label):
                 first = f'<!-- INFO_START -->\n{label} EUR 0.23\n<!-- INFO_END -->\n'
@@ -46,6 +53,7 @@ class ScheduleContentTests(unittest.TestCase):
                 self.assertEqual(strip_travel_metrics(first), strip_travel_metrics(second))
 
     def test_preserves_schedule_changes(self):
+        """Preserve meaningful schedule changes during normalization."""
         first = (
             '| 2026-11-01 | Sunday | Match | 10:00 | 11:00 | 13:00 | '
             '[Sports Hall](https://maps.example) | EUR 4.20 |\n'

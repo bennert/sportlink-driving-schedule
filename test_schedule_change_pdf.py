@@ -1,3 +1,5 @@
+"""Tests for PDF generation with localized schedule change reports."""
+
 from contextlib import chdir, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -14,6 +16,7 @@ from test_schedule_changes import match_row, schedule
 
 
 def convert_pdfs(directory, current):
+    """Run PDF conversion against temporary schedule files."""
     script = Path(__file__).with_name('convert_driving_schedule_to_pdf.py')
     docs = Path(directory) / 'docs'
     docs.mkdir(exist_ok=True)
@@ -27,7 +30,10 @@ def convert_pdfs(directory, current):
 
 
 class ChangePdfTests(unittest.TestCase):
+    """Verify PDF change reports are complete, localized, and paginated."""
+
     def test_localized_report_follows_complete_schedule_on_a_new_page(self):
+        """Place the localized report after the full schedule on a new page."""
         with TemporaryDirectory() as directory:
             docs = Path(directory) / 'docs'
             docs.mkdir()
@@ -56,6 +62,7 @@ class ChangePdfTests(unittest.TestCase):
                         self.assertNotIn('Wijzigingen in het rijschema', report)
 
     def test_missing_unreadable_and_legacy_notices(self):
+        """Render notices for missing, unreadable, and legacy comparisons."""
         for state, previous in (('missing', {}), ('unreadable', sources('not a schedule', '29')),
                                 ('legacy', None)):
             with self.subTest(state=state), TemporaryDirectory() as directory:
@@ -77,6 +84,7 @@ class ChangePdfTests(unittest.TestCase):
                         self.assertNotIn('Added:', text)
 
     def test_required_invalid_or_missing_report_blocks_generation(self):
+        """Block PDF generation when a required report is invalid or absent."""
         for invalid in (None, 'invalid JSON'):
             with self.subTest(invalid=invalid), TemporaryDirectory() as directory:
                 docs = Path(directory) / 'docs'
@@ -89,6 +97,7 @@ class ChangePdfTests(unittest.TestCase):
                 self.assertEqual(list(docs.glob('*.pdf')), [])
 
     def test_long_report_paginates_without_clipping_overlap_or_lost_entries(self):
+        """Paginate long reports without clipping or losing entries."""
         with TemporaryDirectory() as directory:
             docs = Path(directory) / 'docs'
             docs.mkdir()

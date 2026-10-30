@@ -31,6 +31,7 @@ place_id_cache = load_place_id_cache(PLACE_ID_CACHE_PATH)
 def get_google_maps_url(place):
     """ Get google maps url """
     def resolve_place_id(location):
+        """Resolve a location to a Google Maps place ID."""
         response = requests.get(
             'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
             params={
@@ -218,17 +219,17 @@ for sportlink_team in sportlink_team_list:
     logo_team_path = os.path.join('logos', logo_team_filename)
     logo_club_path = os.path.join('logos', logo_club_filename)
     # Use forward slashes for markdown compatibility
-    LOGO_TEAM_PATH_MD = f'logos/{logo_team_filename}'
-    LOGO_CLUB_PATH_MD = f'logos/{logo_club_filename}'
-    HAS_LOGO_TEAM = os.path.exists(logo_team_path)
-    HAS_LOGO_CLUB = os.path.exists(logo_club_path)
+    logo_team_path_md = f'logos/{logo_team_filename}'
+    logo_club_path_md = f'logos/{logo_club_filename}'
+    has_logo_team = os.path.exists(logo_team_path)
+    has_logo_club = os.path.exists(logo_club_path)
 
     print(f'\nProcessing {team_id} @ base: {base_location}')
-    if HAS_LOGO_TEAM:
+    if has_logo_team:
         print(f'  Team logo found: {logo_team_path}')
     else:
         print(f'  No team logo found with expected name: {logo_team_path}')
-    if HAS_LOGO_CLUB:
+    if has_logo_club:
         print(f'  Club logo found: {logo_club_path}')
     else:
         print(f'  No club logo found with expected name: {logo_club_path}')
@@ -249,10 +250,10 @@ for sportlink_team in sportlink_team_list:
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    FILE_PATH_NL = f'docs/Rijschema_{team_id}_{today}.md'
-    FILE_PATH_EN = f'docs/Drivingschedule_{team_id}_{today}.md'
+    file_path_nl = f'docs/Rijschema_{team_id}_{today}.md'
+    file_path_en = f'docs/Drivingschedule_{team_id}_{today}.md'
     # Ensure the directories exist
-    docs_dir = os.path.dirname(FILE_PATH_NL)
+    docs_dir = os.path.dirname(file_path_nl)
     os.makedirs(docs_dir, exist_ok=True)
 
     # Build content first to check if it changed
@@ -263,10 +264,10 @@ for sportlink_team in sportlink_team_list:
     CONTENT_EN += f'Warming Up Time: {timebefore}\n\n'
     CONTENT_EN += f'Cost per km: €{travel_cost_per_km}\n'
     CONTENT_EN += '<!-- INFO_END -->\n'
-    if HAS_LOGO_CLUB:
-        CONTENT_EN += f'<!-- CLUB_LOGO: {LOGO_CLUB_PATH_MD} -->\n'
-    if HAS_LOGO_TEAM:
-        CONTENT_EN += f'<!-- TEAM_LOGO: {LOGO_TEAM_PATH_MD} -->\n'
+    if has_logo_club:
+        CONTENT_EN += f'<!-- CLUB_LOGO: {logo_club_path_md} -->\n'
+    if has_logo_team:
+        CONTENT_EN += f'<!-- TEAM_LOGO: {logo_team_path_md} -->\n'
     CONTENT_EN += '\n'
     CONTENT_EN += get_events_header('en')
     CONTENT_EN += '| --- | --- | --- | --- | --- | --- | --- | --- |\n'
@@ -280,10 +281,10 @@ for sportlink_team in sportlink_team_list:
     CONTENT_NL += f'Warming Up Tijd: {timebefore}\n\n'
     CONTENT_NL += f'Kosten per km: €{travel_cost_per_km}\n'
     CONTENT_NL += '<!-- INFO_END -->\n'
-    if HAS_LOGO_CLUB:
-        CONTENT_NL += f'<!-- CLUB_LOGO: {LOGO_CLUB_PATH_MD} -->\n'
-    if HAS_LOGO_TEAM:
-        CONTENT_NL += f'<!-- TEAM_LOGO: {LOGO_TEAM_PATH_MD} -->\n'
+    if has_logo_club:
+        CONTENT_NL += f'<!-- CLUB_LOGO: {logo_club_path_md} -->\n'
+    if has_logo_team:
+        CONTENT_NL += f'<!-- TEAM_LOGO: {logo_team_path_md} -->\n'
     CONTENT_NL += '\n'
     CONTENT_NL += get_events_header('nl')
     CONTENT_NL += '| --- | --- | --- | --- | --- | --- | --- | --- |\n'
@@ -294,8 +295,8 @@ for sportlink_team in sportlink_team_list:
     # Check if content changed by comparing with old files (if they exist)
     old_content_nl = get_markdown_content(docs_dir, f'Rijschema_{team_id}_')
     old_content_en = get_markdown_content(docs_dir, f'Drivingschedule_{team_id}_')
-    CHANGED_NL = has_content_changed(old_content_nl, CONTENT_NL)
-    CHANGED_EN = has_content_changed(old_content_en, CONTENT_EN)
+    changed_nl = has_content_changed(old_content_nl, CONTENT_NL)
+    changed_en = has_content_changed(old_content_en, CONTENT_EN)
     previous_sources = {}
     for old_prefix, old_source_content in ((f'Rijschema_{team_id}_', old_content_nl),
                                           (f'Drivingschedule_{team_id}_', old_content_en)):
@@ -304,38 +305,44 @@ for sportlink_team in sportlink_team_list:
             previous_sources[os.path.basename(old_path)] = old_source_content
     change_report, schedule_changed = update_change_report(
         docs_dir, team_id, previous_sources,
-        {os.path.basename(FILE_PATH_NL): CONTENT_NL, os.path.basename(FILE_PATH_EN): CONTENT_EN},
+        {os.path.basename(file_path_nl): CONTENT_NL, os.path.basename(file_path_en): CONTENT_EN},
         current_match_ids,
     )
     append_workflow_summary(change_report, schedule_changed, os.getenv('GITHUB_STEP_SUMMARY'))
 
     # Only create flag file if content changed (to trigger PDF conversion)
     if schedule_changed:
-        if CHANGED_NL:
+        if changed_nl:
             print('  Dutch content changed - will update file and trigger PDF conversion')
-            print_content_diff(old_content_nl, CONTENT_NL, f'old_Rijschema_{team_id}', f'new_Rijschema_{team_id}')
-        if CHANGED_EN:
+            print_content_diff(
+                old_content_nl, CONTENT_NL, f'old_Rijschema_{team_id}', f'new_Rijschema_{team_id}')
+        if changed_en:
             print('  English content changed - will update file and trigger PDF conversion')
-            print_content_diff(old_content_en, CONTENT_EN, f'old_Drivingschedule_{team_id}', f'new_Drivingschedule_{team_id}')
+            print_content_diff(
+                old_content_en,
+                CONTENT_EN,
+                f'old_Drivingschedule_{team_id}',
+                f'new_Drivingschedule_{team_id}')
 
         # Clean up old files with different dates
-        cleanup_old_files(docs_dir, f'Rijschema_{team_id}', '.md', FILE_PATH_NL)
-        cleanup_old_files(docs_dir, f'Drivingschedule_{team_id}', '.md', FILE_PATH_EN)
+        cleanup_old_files(docs_dir, f'Rijschema_{team_id}', '.md', file_path_nl)
+        cleanup_old_files(docs_dir, f'Drivingschedule_{team_id}', '.md', file_path_en)
 
-        with open(FILE_PATH_NL, 'w', encoding='utf-8') as file_nl:
+        with open(file_path_nl, 'w', encoding='utf-8') as file_nl:
             file_nl.write(CONTENT_NL)
 
-        with open(FILE_PATH_EN, 'w', encoding='utf-8') as file_en:
+        with open(file_path_en, 'w', encoding='utf-8') as file_en:
             file_en.write(CONTENT_EN)
 
-        FLAG_FILE = f'docs/.convert_to_pdf_{team_id}.flag'
+        flag_file = f'docs/.convert_to_pdf_{team_id}.flag'
         print('  Content changed - flag file created for PDF conversion')
-        with open(FLAG_FILE, 'w', encoding='utf-8') as f:
-            f.write(f'{FILE_PATH_NL}\n{FILE_PATH_EN}\n{team_email}\n')
+        with open(flag_file, 'w', encoding='utf-8') as f:
+            f.write(f'{file_path_nl}\n{file_path_en}\n{team_email}\n')
     else:
         print('  No changes detected - PDF conversion not needed')
 
-with open(os.path.join('docs', 'telegram_announcements.json'), 'w', encoding='utf-8') as output_file:
+with open(
+    os.path.join('docs', 'telegram_announcements.json'), 'w', encoding='utf-8') as output_file:
     json.dump(telegram_announcements, output_file, ensure_ascii=False)
 
 save_place_id_cache(PLACE_ID_CACHE_PATH, place_id_cache)

@@ -1,3 +1,5 @@
+"""Tests for GitHub Actions runtime and workflow migration contracts."""
+
 import json
 import os
 from pathlib import Path
@@ -19,15 +21,20 @@ AUDIT = ROOT / '.github' / 'action-runtime-audit.json'
 
 
 def load_workflow():
+    """Load the checked-in GitHub Actions workflow as YAML data."""
     return yaml.load(WORKFLOW.read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
 
 
 def workflow_steps():
+    """Return the schedule generation workflow steps by name."""
     return {step['name']: step for step in load_workflow()['jobs']['generate-schedule']['steps']}
 
 
 class WorkflowMigrationTests(unittest.TestCase):
+    """Verify workflow actions satisfy the reviewed Node.js 24 contract."""
+
     def metadata_fixtures(self):
+        """Build action metadata fixtures for runtime audit tests."""
         inventory = json.loads(AUDIT.read_text(encoding='utf-8'))
         fixtures = {}
         for action in inventory['actions']:
@@ -47,6 +54,7 @@ class WorkflowMigrationTests(unittest.TestCase):
         return fixtures
 
     def test_dependency_audit_covers_every_reference_without_network_in_unit_tests(self):
+        """Audit all workflow references without making network requests."""
         fixtures = self.metadata_fixtures()
         with patch('requests.get', side_effect=AssertionError('Unit tests must stay offline')):
             results = audit_workflow(fetch_metadata=lambda reference: yaml.safe_dump(fixtures[reference]))
@@ -54,6 +62,7 @@ class WorkflowMigrationTests(unittest.TestCase):
         self.assertEqual({result['using'] for result in results}, {'node24', 'composite'})
 
     def test_dependency_audit_rejects_old_runtime_missing_inputs_and_changed_transport(self):
+        """Reject old runtimes, missing inputs, and changed transport contracts."""
         for problem in ('runtime', 'inputs', 'archive'):
             with self.subTest(problem=problem):
                 fixtures = self.metadata_fixtures()
@@ -70,6 +79,7 @@ class WorkflowMigrationTests(unittest.TestCase):
                     audit_workflow(fetch_metadata=lambda reference, current=fixtures: yaml.safe_dump(current[reference]))
 
     def test_dependency_audit_rejects_unreviewed_nested_action_and_changed_tar_command(self):
+        """Reject nested dependencies and archive commands outside the contract."""
         for problem in ('dependency', 'tar'):
             with self.subTest(problem=problem):
                 fixtures = self.metadata_fixtures()
@@ -82,6 +92,7 @@ class WorkflowMigrationTests(unittest.TestCase):
                     audit_workflow(fetch_metadata=lambda reference, current=fixtures: yaml.safe_dump(current[reference]))
 
     def test_direct_actions_match_reviewed_node24_commits(self):
+        """Keep direct workflow actions pinned to reviewed Node.js 24 commits."""
         audit = json.loads(AUDIT.read_text(encoding='utf-8'))
         reviewed = {(action['repository'], action['ref']): action for action in audit['actions']}
         for repository in ('actions/checkout', 'actions/setup-python', 'actions/configure-pages',
@@ -97,6 +108,7 @@ class WorkflowMigrationTests(unittest.TestCase):
                 self.assertTrue(set(step.get('with', {})).issubset(action['inputs']))
 
     def test_existing_execution_and_notification_contract_is_unchanged(self):
+        """Preserve existing schedule execution and notification behavior."""
         workflow = load_workflow()
         job = workflow['jobs']['generate-schedule']
         steps = workflow_steps()
@@ -119,6 +131,7 @@ class WorkflowMigrationTests(unittest.TestCase):
             self.assertNotIn(setting, text)
 
     def test_ordinary_artifact_paths_and_retention_are_preserved(self):
+        """Preserve artifact paths and retention settings during migration."""
         expected = {
             'driving-schedules-md': (['docs/*.md', 'docs/schedule_changes_*.json'], '30'),
             'google-maps-place-id-cache': (['docs/google_maps_place_ids.json'], '90'),
@@ -133,6 +146,7 @@ class WorkflowMigrationTests(unittest.TestCase):
                          "steps.create_schedule.outcome == 'success'")
 
     def test_both_downloads_keep_previous_successful_run_and_missing_artifact_contracts(self):
+        """Preserve download behavior for prior runs and missing artifacts."""
         audit = json.loads(AUDIT.read_text(encoding='utf-8'))
         action = next(item for item in audit['actions']
                       if item['repository'] == 'dawidd6/action-download-artifact')
@@ -153,6 +167,7 @@ class WorkflowMigrationTests(unittest.TestCase):
             self.assertTrue(set(step['with']).issubset(action['inputs']))
 
     def test_pages_composite_uses_only_reviewed_node24_dependencies(self):
+        """Restrict the Pages composite action to reviewed Node.js 24 dependencies."""
         audit = json.loads(AUDIT.read_text(encoding='utf-8'))
         reviewed = {f"{action['repository']}@{action['ref']}": action for action in audit['actions']}
         step = workflow_steps()['Upload GitHub Pages artifact']
@@ -165,6 +180,7 @@ class WorkflowMigrationTests(unittest.TestCase):
             self.assertEqual(reviewed[dependency]['using'], 'node24')
 
     def test_reviewed_pages_tar_contract_keeps_site_paths_and_excludes_secrets_and_links(self):
+        """Preserve archive paths while excluding secrets and symbolic links."""
         audit = json.loads(AUDIT.read_text(encoding='utf-8'))
         pages = next(action for action in audit['actions'] if action['using'] == 'composite')
         git = shutil.which('git')

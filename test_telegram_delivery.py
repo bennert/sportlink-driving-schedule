@@ -1,3 +1,5 @@
+"""Tests for Telegram announcement formatting and delivery outcomes."""
+
 import io
 import json
 import os
@@ -16,7 +18,10 @@ from send_telegram_announcements import (
 
 
 class TelegramDeliveryTests(unittest.TestCase):
+    """Verify Telegram announcement formatting and delivery handling."""
+
     def test_format_empty_announcement_names_team_and_period(self):
+        """Name the team and covered period when no matches are scheduled."""
         message = format_announcement('EHV HS1', [])
 
         self.assertEqual(
@@ -25,6 +30,7 @@ class TelegramDeliveryTests(unittest.TestCase):
         )
 
     def test_send_empty_announcement_to_every_team_destination(self):
+        """Send the no-matches announcement to every configured destination."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             announcements_path = Path(temporary_directory) / 'announcements.json'
             announcements_path.write_text(
@@ -49,6 +55,7 @@ class TelegramDeliveryTests(unittest.TestCase):
         self.assertIn('Sent 2 Telegram announcement(s)', output.getvalue())
 
     def test_summarize_success_and_failure_per_destination(self):
+        """Summarize successful and failed Telegram destinations separately."""
         summary = format_delivery_summary([
             {
                 'team_id': 'EHV HS1', 'destination': '-1001', 'status': 'Sent',
@@ -64,6 +71,7 @@ class TelegramDeliveryTests(unittest.TestCase):
         self.assertIn('| EHV HS1 | -1002 | Failed | Telegram returned HTTP 400: chat not found. |', summary)
 
     def test_partial_delivery_failure_is_summarized_and_fails_run(self):
+        """Fail the run and summarize results when only some sends succeed."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             announcements_path = Path(temporary_directory) / 'announcements.json'
             summary_path = Path(temporary_directory) / 'summary.md'
@@ -73,6 +81,7 @@ class TelegramDeliveryTests(unittest.TestCase):
             output = io.StringIO()
 
             def send_message(bot_token, chat_id, _message):
+                """Simulate a send failure for one destination."""
                 if chat_id == '-1002':
                     raise RuntimeError(f'Telegram error for {bot_token}: chat not found')
 
@@ -94,6 +103,7 @@ class TelegramDeliveryTests(unittest.TestCase):
             self.assertIn('## Telegram delivery results', output.getvalue())
 
     def test_format_announcement_includes_match_and_travel_details(self):
+        """Include match, location, and travel details in announcements."""
         match = [
             '2026-11-01', 'Sunday', 'Opponent-Team', '10:00', '11:00', '13:00',
             '[Sports Hall](https://maps.example/match)', '€ 4.20'
@@ -110,6 +120,7 @@ class TelegramDeliveryTests(unittest.TestCase):
         self.assertNotIn('Afstand:', message)
 
     def test_format_announcement_separates_each_match(self):
+        """Separate consecutive matches into distinct message sections."""
         first_match = [
             '2026-11-01', 'Sunday', 'Opponent-One', '10:00', '11:00', '13:00',
             '[Sports Hall](https://maps.example/one)', '€ 4.20'
@@ -126,6 +137,7 @@ class TelegramDeliveryTests(unittest.TestCase):
 
     @patch('send_telegram_announcements.requests.post')
     def test_send_posts_to_telegram_bot_api(self, post):
+        """Post the expected message payload to the Telegram Bot API."""
         response = Mock(status_code=200)
         response.json.return_value = {'ok': True}
         post.return_value = response
@@ -140,6 +152,7 @@ class TelegramDeliveryTests(unittest.TestCase):
 
     @patch('send_telegram_announcements.requests.post')
     def test_report_telegram_api_rejection(self, post):
+        """Report an API rejection instead of accepting a failed send."""
         response = Mock(status_code=200)
         response.json.return_value = {'ok': False, 'description': 'Forbidden'}
         post.return_value = response
@@ -149,6 +162,7 @@ class TelegramDeliveryTests(unittest.TestCase):
 
     @patch('send_telegram_announcements.requests.post')
     def test_include_api_description_for_http_400(self, post):
+        """Include Telegram's error description for HTTP 400 responses."""
         response = Mock(status_code=400)
         response.json.return_value = {
             'ok': False,

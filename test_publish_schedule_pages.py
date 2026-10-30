@@ -1,3 +1,5 @@
+"""Tests for publishing stable links to the latest team schedules."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,7 +8,10 @@ from publish_schedule_pages import publish_latest_schedules, team_slug
 
 
 class PublishSchedulePagesTests(unittest.TestCase):
+    """Verify publishing picks the latest PDF and rejects empty sources."""
+
     def test_publishes_all_teams_and_uses_the_newest_pdf_per_team(self):
+        """Publish every team using its newest available schedule PDF."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             current_pdfs = root / 'current'
@@ -31,6 +36,7 @@ class PublishSchedulePagesTests(unittest.TestCase):
             self.assertIn('29-10-2026', index_html)
 
     def test_rejects_empty_schedule_sources(self):
+        """Reject publishing when no schedule PDFs are available."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             source = root / 'empty'

@@ -1,3 +1,5 @@
+"""Tests for Google Maps place ID cache behavior and validation."""
+
 import json
 import os
 import tempfile
@@ -12,7 +14,10 @@ from google_maps_cache import (
 
 
 class GoogleMapsCacheTests(unittest.TestCase):
+    """Verify place ID caching, persistence, and invalidation behavior."""
+
     def test_reuses_place_id_for_same_normalized_location(self):
+        """Reuse a cached ID when the normalized location is unchanged."""
         place_ids = {}
         resolver = Mock(return_value='place-123')
 
@@ -24,6 +29,7 @@ class GoogleMapsCacheTests(unittest.TestCase):
         resolver.assert_called_once_with('Sporthal, Eindhoven')
 
     def test_persists_only_place_ids_and_non_google_location_keys(self):
+        """Persist place IDs without storing Google Maps URLs."""
         with tempfile.TemporaryDirectory() as directory:
             cache_path = os.path.join(directory, 'places.json')
             place_ids = {'sporthal, eindhoven': 'place-123'}
@@ -38,6 +44,7 @@ class GoogleMapsCacheTests(unittest.TestCase):
         self.assertEqual({'sporthal, eindhoven': 'place-123'}, serialized['place_ids'])
 
     def test_changed_location_resolves_a_new_place_id(self):
+        """Resolve a fresh place ID when a location changes."""
         place_ids = {'sporthal, eindhoven': 'place-123'}
         resolver = Mock(return_value='place-456')
 

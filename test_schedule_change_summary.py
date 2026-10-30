@@ -1,3 +1,5 @@
+"""Tests for workflow summaries of per-team schedule changes."""
+
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -9,12 +11,16 @@ from test_schedule_changes import match_row, schedule
 
 
 class WorkflowChangeSummaryTests(unittest.TestCase):
+    """Verify workflow summaries report each team's current change status."""
+
     def report(self, directory, previous=True):
+        """Create and return a changed or baseline-free report fixture."""
         old = sources(schedule(), '29') if previous else {}
         current = sources(schedule([match_row(collection_time='10:15')]))
         return update_change_report(directory, 'EHV HS1', old, current, ['id'])[0]
 
     def test_changed_and_unchanged_teams_have_separate_current_run_results(self):
+        """Separate changed and unchanged team results in the run summary."""
         with TemporaryDirectory() as directory:
             report = self.report(directory)
             path = Path(directory) / 'summary.md'
@@ -33,6 +39,7 @@ class WorkflowChangeSummaryTests(unittest.TestCase):
             self.assertNotIn('coach@example.com', summary)
 
     def test_unavailable_comparison_is_not_reported_as_no_changes(self):
+        """Distinguish unavailable comparisons from schedules with no changes."""
         with TemporaryDirectory() as directory:
             report = self.report(directory, previous=False)
             path = Path(directory) / 'summary.md'
@@ -43,6 +50,7 @@ class WorkflowChangeSummaryTests(unittest.TestCase):
             self.assertNotIn('No schedule changes', text)
 
     def test_all_entries_survive_later_delivery_failure_and_source_text_is_escaped(self):
+        """Keep report entries after delivery failure and escape source text."""
         with TemporaryDirectory() as directory:
             report = self.report(directory)
             report['entries'] = [dict(report['entries'][0], description=f'Match {index:02d} <b>&</b>')

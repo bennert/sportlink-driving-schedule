@@ -1,3 +1,5 @@
+"""Persist and reuse Google Maps place IDs for normalized locations."""
+
 import json
 import os
 
@@ -6,10 +8,12 @@ CACHE_VERSION = 1
 
 
 def normalize_location(location):
+    """Normalize whitespace and case for a location cache key."""
     return ' '.join(location.casefold().split())
 
 
 def load_place_id_cache(path):
+    """Load and validate cached place IDs from a JSON file."""
     if not os.path.exists(path):
         return {}
     with open(path, 'r', encoding='utf-8') as cache_file:
@@ -26,6 +30,7 @@ def load_place_id_cache(path):
 
 
 def save_place_id_cache(path, place_ids):
+    """Write place IDs to the versioned JSON cache file."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8') as cache_file:
         json.dump(
@@ -37,6 +42,7 @@ def save_place_id_cache(path, place_ids):
 
 
 def get_or_resolve_place_id(location, place_ids, resolve_place_id):
+    """Return a cached place ID or resolve and cache the location."""
     location_key = normalize_location(location)
     place_id = place_ids.get(location_key)
     if place_id:

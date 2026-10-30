@@ -11,7 +11,8 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch, cm
-from reportlab.platypus import (Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (
+    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 from schedule_change_store import load_change_report, verify_report_source
 from schedule_change_text import HEADINGS, report_lines
 
@@ -149,8 +150,8 @@ for markdown_file in markdown_files_to_convert:
 
             # Create the info block
             if CLUB_LOGO_PATH or TEAM_LOGO_PATH:
-                INFO_TEXT = '<br/>'.join(info_lines)
-                info_paragraph = Paragraph(INFO_TEXT, normal_style)
+                info_text = '<br/>'.join(info_lines)
+                info_paragraph = Paragraph(info_text, normal_style)
 
                 # Load logos
                 logos_to_display = []

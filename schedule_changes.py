@@ -1,3 +1,5 @@
+"""Parse schedule versions and build localized change reports."""
+
 from collections import Counter
 from datetime import datetime
 import hashlib
@@ -7,8 +9,9 @@ import re
 from schedule_content import LOCATION_LINK_PATTERN, strip_travel_metrics
 
 
-MATCH_FIELDS = ('date', 'weekday', 'description', 'collection_time', 'start_time', 'end_time', 'location')
-WEEKDAYS = dict(zip(
+MATCH_FIELDS = (
+    'date', 'weekday', 'description', 'collection_time', 'start_time', 'end_time', 'location')
+WEEKDAYS: dict[str, str] = dict(zip(
     ('Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'),
     ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'),
 ))
@@ -33,12 +36,14 @@ COMPARISON_NOTICES = {
 
 
 def version_reference(filename, content):
+    """Identify a schedule version by filename and normalized content digest."""
     return {'filename': Path(filename).name,
             'digest': hashlib.sha256(content.encode('utf-8')).hexdigest()}
 
 
 def build_change_report(team_id, previous_content, current_content, previous_name, current_name,
                         previous_ids=None, current_ids=None):
+    """Build a report comparing two schedule versions for one team."""
     current = parse_schedule(current_content, current_ids)
     report = {
         'schema_version': 1, 'team_id': team_id,
@@ -58,6 +63,7 @@ def build_change_report(team_id, previous_content, current_content, previous_nam
 
 
 def comparison_notice(report, language):
+    """Return the localized notice describing a report's comparison baseline."""
     if report['comparison'] != 'compared':
         return COMPARISON_NOTICES[report['comparison']][language]
     baseline = report['baseline']
@@ -66,6 +72,7 @@ def comparison_notice(report, language):
 
 
 def parse_schedule(content, match_ids=None):
+    """Parse schedule text into settings and normalized match records."""
     matches, settings, document = [], {}, []
     table_found = False
     columns = None
@@ -73,7 +80,8 @@ def parse_schedule(content, match_ids=None):
         line = line.strip()
         if not line or line in ('<!-- INFO_START -->', '<!-- INFO_END -->'):
             continue
-        if line.startswith(('# Rijschema ', '# Driving schedule ', 'Cost per km:', 'Kosten per km:')):
+        if line.startswith(
+            ('# Rijschema ', '# Driving schedule ', 'Cost per km:', 'Kosten per km:')):
             continue
         setting = next((label for label in SETTING_LABELS if line.startswith(label)), None)
         if setting:
@@ -117,12 +125,15 @@ def parse_schedule(content, match_ids=None):
 
 
 def compare_schedules(previous, current):
+    """Return added, removed, and changed matches between two schedules."""
     old_matches, new_matches = previous['matches'], current['matches']
     old_remaining, new_remaining = set(range(len(old_matches))), set(range(len(new_matches)))
     pairs = []
     for key in ('uid', 'legacy'):
         def identity(match, matching_key=key):
-            return match.get('uid') if matching_key == 'uid' else (match['date'], match['description'])
+            """Return the matching identity for a schedule row."""
+            return match.get('uid') \
+                if matching_key == 'uid' else (match['date'], match['description'])
 
         old_counts = Counter(identity(match) for match in old_matches)
         new_counts = Counter(identity(match) for match in new_matches)
@@ -162,7 +173,10 @@ def compare_schedules(previous, current):
             entries.append({'kind': kind, 'date': match['date'],
                             'description': match['description'], 'match': match})
     for field in sorted(previous['settings'].keys() | current['settings'].keys()):
-        old_value, new_value = previous['settings'].get(field, ''), current['settings'].get(field, '')
+        old_value, new_value = (
+            previous['settings'].get(field, ''),
+            current['settings'].get(field, '')
+        )
         if old_value != new_value:
             entries.append({'kind': 'document' if field.endswith('_logo') else 'setting',
                             'field': field, 'old': old_value, 'new': new_value})

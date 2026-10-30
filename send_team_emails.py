@@ -95,8 +95,8 @@ if not flag_files:
 print(f"\nFound {len(flag_files)} team(s) with changes")
 
 # Process each team
-EMAILS_SENT = 0
-REPORT_ERRORS = 0
+emails_sent = 0
+report_errors = 0
 for flag_file in flag_files:
     flag_path = os.path.join(handbal_folder, flag_file)
     team_id = flag_file.replace('.convert_to_pdf_', '').replace('.flag', '')
@@ -125,7 +125,7 @@ for flag_file in flag_files:
         change_text = bilingual_report(report)
     except (ValueError, OSError) as error:
         print(f'  Cannot send schedule update for {team_id}: {error}')
-        REPORT_ERRORS += 1
+        report_errors += 1
         continue
 
     # Get corresponding PDF files
@@ -143,8 +143,8 @@ for flag_file in flag_files:
         continue
 
     # Prepare email
-    SUBJECT = f"{email_subject_prefix} - {team_id} - {datetime.now().strftime('%Y-%m-%d')}"
-    BODY = f"""New driving schedule generated for {team_id}!
+    subject = f"{email_subject_prefix} - {team_id} - {datetime.now().strftime('%Y-%m-%d')}"
+    body = f"""New driving schedule generated for {team_id}!
 
 {change_text}
 
@@ -155,18 +155,18 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
     # Send email
     if send_email(team_email,
-                  SUBJECT,
-                  BODY,
+                  subject,
+                  body,
                   pdf_files,
                   email_from=mail_from,
                   scheduler_id=team_id,
                   smtp_username=username,
                   smtp_password=password):
-        EMAILS_SENT += 1
+        emails_sent += 1
 
 print(f"\n{'='*50}")
-print(f"Email summary: {EMAILS_SENT} email(s) sent successfully")
+print(f"Email summary: {emails_sent} email(s) sent successfully")
 print(f"{'='*50}")
 
-if EMAILS_SENT == 0 or REPORT_ERRORS:
+if emails_sent == 0 or report_errors:
     sys.exit(1)

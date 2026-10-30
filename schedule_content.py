@@ -1,3 +1,5 @@
+"""Normalize schedule content while excluding travel metrics."""
+
 import re
 
 
@@ -5,6 +7,7 @@ LOCATION_LINK_PATTERN = re.compile(r'^\[(.*)\]\(.*\)$')
 
 
 def strip_travel_metrics(content):
+    """Remove travel costs and route metrics from schedule content."""
     stripped_lines = []
     for line in content.splitlines(keepends=True):
         if line.startswith(('Cost per km:', 'Kosten per km:')):
