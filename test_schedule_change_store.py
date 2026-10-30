@@ -30,23 +30,33 @@ class ChangeStoreTests(unittest.TestCase):
         with TemporaryDirectory() as directory, chdir(directory), redirect_stdout(StringIO()), \
                 patch.dict(os.environ, VALID_CONFIGURATION, clear=True), \
                 patch('dotenv.load_dotenv'), patch('requests.get') as request:
+            summary_path = Path(directory) / 'summary.md'
+            os.environ['GITHUB_STEP_SUMMARY'] = str(summary_path)
             request.return_value.json.return_value = {'candidates': [{'place_id': 'place-1'}]}
             request.return_value.content = calendar.format(start='10', end='12').encode()
             runpy.run_path(str(script), run_name='__main__')
             first = load_change_report('docs', 'EHV HS1', required=True)
+            assert first is not None
             self.assertEqual(first['comparison'], 'missing')
             self.assertEqual(first['snapshot']['matches'][0]['uid'], 'stable-match')
             self.assertEqual(first['snapshot']['matches'][0]['start_time'], '11:00')
+            self.assertIn('No previous version available;', summary_path.read_text(encoding='utf-8'))
             request.return_value.content = calendar.format(start='11', end='13').encode()
             runpy.run_path(str(script), run_name='__main__')
             updated = load_change_report('docs', 'EHV HS1', required=True)
+            assert updated is not None
             self.assertEqual(updated['comparison'], 'compared')
             self.assertEqual({entry['field'] for entry in updated['entries']},
                              {'collection_time', 'start_time', 'end_time'})
             Path('docs/.convert_to_pdf_EHV HS1.flag').unlink()
+            summary_path.write_text('', encoding='utf-8')
             runpy.run_path(str(script), run_name='__main__')
             self.assertEqual(load_change_report('docs', 'EHV HS1', required=True), updated)
             self.assertFalse(Path('docs/.convert_to_pdf_EHV HS1.flag').exists())
+            summary = summary_path.read_text(encoding='utf-8')
+            self.assertIn('Geen schemawijzigingen', summary)
+            self.assertIn('No schedule changes', summary)
+            self.assertNotIn('Collection time:', summary)
 
     def test_artifact_round_trip_without_previous_files_retains_uids_and_baseline(self):
         with TemporaryDirectory() as directory:
@@ -62,6 +72,7 @@ class ChangeStoreTests(unittest.TestCase):
             for name, content in current_sources.items():
                 (Path(directory) / name).write_text(content, encoding='utf-8')
             restored = load_change_report(directory, 'EHV HS1', required=True)
+            assert restored is not None
             self.assertEqual(restored, report)
             self.assertEqual(restored['snapshot']['matches'][0]['uid'], 'stable-id')
 

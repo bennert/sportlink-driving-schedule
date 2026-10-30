@@ -147,10 +147,31 @@ GitHub Actions persists a cache mapping normalized Sportlink locations to Google
 python create_driving_schedule.py
 ```
 
+### Understand schedule changes
+
+Schedule update emails include the complete change report in Dutch and English. Each PDF includes the report in its own language, on new pages after the schedule table. GitHub Actions also shows the current run's changes per team in its run summary, before email delivery.
+
+Reports show added and removed matches, old and new match details, and changed schedule settings. A removed match is not automatically a cancelled match. Comparisons use the previous available schedule, not a confirmed last-delivered email. Missing or unreadable previous versions are explicitly identified.
+
+Travel costs, kilometre rates, route metric values, and map URL changes do not trigger update emails or appear in change entries. Costs remain visible in the full schedule. Without relevant changes, no update email is sent and the PDF keeps the report belonging to its current version.
+
+The latest report and source match identifiers are stored in per-team JSON files alongside the Markdown schedules and retained in the `driving-schedules-md` artifact. Restore those files together. Invalid reports or reports for another schedule version block update delivery rather than silently dropping the explanation. Legacy schedules without reports show an explicit unavailable-report notice.
+
 ### Convert driving schedule to PDF
 ```bash
 python convert_driving_schedule_to_pdf.py
 ```
+
+### Run the tests
+
+Install the test dependencies in the activated virtual environment, then run:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m unittest discover -v
+```
+
+Tests use local fixtures and mocked external services. PDF tests generate both languages, extract text, render report pages, and check pagination and text bounds.
 
 ### Adding Team Logos
 

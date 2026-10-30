@@ -16,6 +16,7 @@ from google_maps_cache import (
 )
 from schedule_content import strip_travel_metrics
 from schedule_change_store import update_change_report
+from schedule_change_text import append_workflow_summary
 from telegram_schedule import AMSTERDAM, select_matches_in_next_seven_days
 
 load_dotenv()
@@ -306,6 +307,7 @@ for sportlink_team in sportlink_team_list:
         {os.path.basename(FILE_PATH_NL): CONTENT_NL, os.path.basename(FILE_PATH_EN): CONTENT_EN},
         current_match_ids,
     )
+    append_workflow_summary(change_report, schedule_changed, os.getenv('GITHUB_STEP_SUMMARY'))
 
     # Only create flag file if content changed (to trigger PDF conversion)
     if schedule_changed:

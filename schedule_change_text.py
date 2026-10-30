@@ -1,4 +1,6 @@
 from datetime import datetime
+from html import escape
+from pathlib import Path
 
 from schedule_changes import WEEKDAYS, comparison_notice
 
@@ -69,3 +71,12 @@ def report_lines(report, language):
 
 def bilingual_report(report):
     return '\n'.join(report_lines(report, 'nl')) + '\n\n' + '\n'.join(report_lines(report, 'en'))
+
+
+def append_workflow_summary(report, changed, summary_path):
+    if not summary_path:
+        return
+    text = bilingual_report(report) if changed else 'Geen schemawijzigingen\nNo schedule changes'
+    section = f"<h2>{escape(report['team_id'])}</h2>\n<pre>{escape(text)}</pre>\n\n"
+    with Path(summary_path).open('a', encoding='utf-8') as summary:
+        summary.write(section)
